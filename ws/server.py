@@ -20,13 +20,14 @@ class FlaskThread(QThread):
 
         @flask_app.route('/api/update', methods=['POST'])
         def update():
-            data = request.get_json(force=True)
+            # data = request.get_json(force=True)
+            data = request.get_data().decode()
 
             with State.lock:
                 skip_click = State.ui.skip_click
 
             if not skip_click:
-                self.updated.emit(str(data))  # Emit signal with JSON data
+                self.updated.emit(data)  # Emit signal with JSON data
                 State.events.button_process.wait()  # Wait for the button to be clicked
                 State.events.button_process.clear()  # Reset the event for the next API call
 
@@ -80,8 +81,9 @@ class FlaskThread(QThread):
                             wait_for_data = not State.ui.skip_click
 
                         if wait_for_data:
-                            data = request.get_json(force=True)
-                            self.updated.emit(str(data))  # Emit signal with JSON data
+                            # data = request.get_json(force=True)
+                            data = request.get_data().decode()
+                            self.updated.emit(data)  # Emit signal with JSON data
 
                             print("Now waiting for data")
                             State.events.button_process.wait()  # Wait for the button to be clicked

@@ -1,3 +1,4 @@
+import base64
 import json
 import sys
 import threading
@@ -6,6 +7,15 @@ from pprint import pprint, pformat
 from PyQt5.QtWidgets import QMainWindow, QPushButton, QVBoxLayout, QWidget, QTextEdit, QSplitter, \
     QHBoxLayout, QCheckBox
 from PyQt5.QtCore import QThread, pyqtSignal, Qt
+from PyQt5 import QtGui
+
+try:
+    from PyQt5.Qsci import QsciScintilla, QsciLexerPython
+    HAVE_SCINTILLA = True
+except ImportError:
+    print("This app requires Scintilla")
+    print("Ubuntu: apt-get install python3-pyqt5.qsci")
+    sys.exit(1)
 
 from contextlib import contextmanager
 
@@ -19,6 +29,18 @@ def capture_stdout_as_string():
     sys.stdout = io.StringIO()  # Redirect stdout to a StringIO object
     yield sys.stdout
     sys.stdout = old_stdout  # Restore stdout
+
+
+def print_bytes(input_bytes):
+    ret = ""
+    for i in range(0, len(input_bytes), 16):
+        slice = input_bytes[i:i + 16]
+        hex_bytes = ' '.join(f'{b:02x}' for b in slice)
+        hex_bytes = hex_bytes.ljust(16 * 3)  # each byte becomes 'xy ' so 3 chars long
+        ascii_repr = ''.join(chr(b) if 32 <= b <= 126 else '.' for b in slice)
+        ret += f'{i:04x}: {hex_bytes} | {ascii_repr}\n'
+    return ret
+
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -43,6 +65,9 @@ class MainWindow(QMainWindow):
         leftContainer = QWidget()
         leftLayout = QVBoxLayout()
         self.textEdit = QTextEdit()
+        font = QtGui.QFont("Courier", 11)  # "Courier" is a commonly available monospaced font
+        self.textEdit.setFont(font)
+
         self.textEdit.setReadOnly(True)
         self.button = QPushButton('Process Request')
         self.button.clicked.connect(self.on_button_clicked)
@@ -63,10 +88,18 @@ class MainWindow(QMainWindow):
         # Right side components (New functionality for script execution)
         rightContainer = QWidget()
         rightLayout = QVBoxLayout()
-        self.scriptEdit = QTextEdit()
+
+        # self.scriptEdit = QTextEdit()
+        # self.scriptEdit.setFont(font)
+        lexer = QsciLexerPython()
+        self.scriptEdit = QsciScintilla()
+        self.scriptEdit.setLexer(lexer)
+        self.scriptEdit.setFont(font)
+
         self.executeButton = QPushButton('Execute Script')
         self.executeButton.clicked.connect(self.execute_script)
         self.outputEdit = QTextEdit()
+        self.outputEdit.setFont(font)
         self.outputEdit.setReadOnly(True)
         rightLayout.addWidget(self.scriptEdit)
         rightLayout.addWidget(self.executeButton)
@@ -129,5 +162,10 @@ class MainWindow(QMainWindow):
             should_update = not State.ui.skip_click
 
         if should_update:
-            self.textEdit.setText(f"Received data: {pformat(data)}\n\nClick 'Process Request' to respond.")
+
+            content = json.loads(data)['details']['info']['content']
+            content = base64.b64decode(content)
+            content = print_bytes(content)
+
+            self.textEdit.setText(f"Received data:\n\n{content}\n\nClick 'Process Request' to respond.")
             self.button.setDisabled(False)
