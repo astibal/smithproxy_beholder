@@ -2,12 +2,10 @@ import base64
 import json
 import sys
 import copy
-import threading
-from pprint import pprint, pformat
 
 from PyQt5.QtWidgets import QMainWindow, QPushButton, QVBoxLayout, QWidget, QTextEdit, QSplitter, \
     QHBoxLayout, QCheckBox
-from PyQt5.QtCore import QThread, pyqtSignal, Qt
+from PyQt5.QtCore import Qt
 from PyQt5 import QtGui
 
 try:
@@ -94,8 +92,9 @@ class MainWindow(QMainWindow):
         # self.scriptEdit.setFont(font)
         lexer = QsciLexerPython()
         self.scriptEdit = QsciScintilla()
+        lexer.setFont(font)
         self.scriptEdit.setLexer(lexer)
-        self.scriptEdit.setFont(font)
+
         self.scriptEdit.setText(
             "# Available variables:\n"
             "#    content_data - bytes of content data received from the proxy\n"
