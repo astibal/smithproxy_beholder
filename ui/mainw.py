@@ -1,6 +1,7 @@
 import base64
 import json
 import sys
+import copy
 import threading
 from pprint import pprint, pformat
 
@@ -95,6 +96,10 @@ class MainWindow(QMainWindow):
         self.scriptEdit = QsciScintilla()
         self.scriptEdit.setLexer(lexer)
         self.scriptEdit.setFont(font)
+        self.scriptEdit.setText(
+            "# Available variables:\n"
+            "#    content_data - bytes of content data received from the proxy\n"
+        )
 
         self.executeButton = QPushButton('Execute Script')
         self.executeButton.clicked.connect(self.execute_script)
@@ -127,6 +132,8 @@ class MainWindow(QMainWindow):
         State.events.button_process.set()
 
         self.textEdit.clear()
+        with State.lock:
+            State.ui.content_data = None
         self.button.setDisabled(True)
 
     def on_skip_condition_toggled(self, state):
@@ -141,13 +148,19 @@ class MainWindow(QMainWindow):
 
     def execute_script(self):
         # Get the script from scriptEdit
-        script = self.scriptEdit.toPlainText()
+        script = self.scriptEdit.text()
 
         # Use the capture_stdout_as_string context manager to capture output
         with capture_stdout_as_string() as captured_output:
             try:
+                with State.lock:
+                    exported_data = {
+                        "__name__": "__main__",
+                        'content_data': copy.copy(State.ui.content_data)
+                    }
+
                 # Execute the script
-                exec(script, {"__name__": "__main__"})
+                exec(script, exported_data)
                 # After script execution, captured_output.getvalue() contains the output
                 output = captured_output.getvalue()
             except Exception as e:
@@ -165,6 +178,9 @@ class MainWindow(QMainWindow):
 
             content = json.loads(data)['details']['info']['content']
             content = base64.b64decode(content)
+            with State.lock:
+                State.ui.content_data = copy.copy(content)
+
             content = print_bytes(content)
 
             self.textEdit.setText(f"Received data:\n\n{content}\n\nClick 'Process Request' to respond.")

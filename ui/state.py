@@ -10,4 +10,8 @@ class State:
         button_process = threading.Event()
 
     class ui:
+
+        # should we just ignore everything and let webhooks flow with default answers
         skip_click = True
+        # content bytes received
+        content_data = None
