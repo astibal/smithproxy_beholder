@@ -12,6 +12,7 @@ class State:
     class ui:
 
         # should we just ignore everything and let webhooks flow with default answers
-        skip_click = True
+        skip_click: bool = True
         # content bytes received
-        content_data = None
+        content_data: bytes = None
+        content_replacement: bytes = None

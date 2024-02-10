@@ -10,7 +10,6 @@ from PyQt5 import QtGui
 
 try:
     from PyQt5.Qsci import QsciScintilla, QsciLexerPython
-    HAVE_SCINTILLA = True
 except ImportError:
     print("This app requires Scintilla")
     print("Ubuntu: apt-get install python3-pyqt5.qsci")
@@ -20,6 +19,7 @@ from contextlib import contextmanager
 
 import ws.server
 from .state import State
+
 
 @contextmanager
 def capture_stdout_as_string():
@@ -98,6 +98,7 @@ class MainWindow(QMainWindow):
         self.scriptEdit.setText(
             "# Available variables:\n"
             "#    content_data - bytes of content data received from the proxy\n"
+            "#    content_replacement - None or bytes used by proxy to replace original content\n"
         )
 
         self.executeButton = QPushButton('Execute Script')
@@ -145,6 +146,14 @@ class MainWindow(QMainWindow):
             with State.lock:
                 State.ui.skip_click = False
 
+    def validate_results(self, exported_data: dict):
+        if exported_data['content_replacement']:
+            if isinstance(exported_data['content_replacement'], str) \
+                    or isinstance(exported_data['content_replacement'], bytes):
+                return
+
+            raise TypeError("content_replacement: must be 'bytes' or 'str'")
+
     def execute_script(self):
         # Get the script from scriptEdit
         script = self.scriptEdit.text()
@@ -153,20 +162,34 @@ class MainWindow(QMainWindow):
         with capture_stdout_as_string() as captured_output:
             try:
                 with State.lock:
+                    State.ui.content_replacement = None
                     exported_data = {
                         "__name__": "__main__",
-                        'content_data': copy.copy(State.ui.content_data)
+                        'content_data': copy.copy(State.ui.content_data),
+                        'content_replacement': None
                     }
 
                 # Execute the script
                 exec(script, exported_data)
                 # After script execution, captured_output.getvalue() contains the output
                 output = captured_output.getvalue()
+                self.validate_results(exported_data)
+
             except Exception as e:
                 output = f"Error executing script: {e}"
+                self.outputEdit.setText(output)
+                return
 
         # Display the output in the outputEdit text box
         self.outputEdit.setText(output)
+
+        # collect results
+        if exported_data['content_replacement']:
+            with State.lock:
+                State.ui.content_replacement = exported_data['content_replacement']
+                print(f"Got replacement data: {len(State.ui.content_replacement)}B")
+        else:
+            print("no replacements this time")
 
     def update_display(self, data):
         print("update_display")
@@ -174,7 +197,6 @@ class MainWindow(QMainWindow):
             should_update = not State.ui.skip_click
 
         if should_update:
-
             content = json.loads(data)['details']['info']['content']
             content = base64.b64decode(content)
             with State.lock:

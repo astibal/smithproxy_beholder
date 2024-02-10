@@ -1,3 +1,4 @@
+import base64
 import json
 import sys
 import threading
@@ -89,6 +90,17 @@ class FlaskThread(QThread):
                             State.events.button_process.wait()  # Wait for the button to be clicked
                             State.events.button_process.clear()  # Reset the event for the next API call
                             print("Data received")
+
+                            with State.lock:
+                                if State.ui.content_replacement:
+                                    print(f"custom replacement detected: {len(State.ui.content_replacement)}B")
+
+                                    if isinstance(State.ui.content_replacement, str):
+                                        State.ui.content_replacement = bytes(State.ui.content_replacement, 'utf-8')
+
+                                    reply_body["content"] = base64.b64encode(State.ui.content_replacement).decode()
+                                    State.ui.content_replacement = None
+
 
                     except KeyError:
                         print("::: error, no 'content'")
