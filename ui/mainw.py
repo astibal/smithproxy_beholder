@@ -106,6 +106,13 @@ class MainWindow(QMainWindow):
         self.outputEdit = QTextEdit()
         self.outputEdit.setFont(font)
         self.outputEdit.setReadOnly(True)
+
+        rightLayoutTopButtons = QHBoxLayout()
+        self.autoRunCheckBox = QCheckBox('Auto-Execute', self)
+        self.autoRunCheckBox.stateChanged.connect(self.on_autorun_toggled)
+        rightLayoutTopButtons.addWidget(self.autoRunCheckBox)
+
+        rightLayout.addLayout(rightLayoutTopButtons)
         rightLayout.addWidget(self.scriptEdit)
         rightLayout.addWidget(self.executeButton)
         rightLayout.addWidget(self.outputEdit)
@@ -145,6 +152,14 @@ class MainWindow(QMainWindow):
             print("UnChecked")
             with State.lock:
                 State.ui.skip_click = False
+
+    def on_autorun_toggled(self, state):
+        if state == Qt.CheckState.Checked:
+            with State.lock:
+                State.ui.autorun = True
+        else:
+            with State.lock:
+                State.ui.autorun = False
 
     def validate_results(self, exported_data: dict):
         if exported_data['content_replacement']:
@@ -205,4 +220,11 @@ class MainWindow(QMainWindow):
             content = print_bytes(content)
 
             self.textEdit.setText(f"Received data:\n\n{content}\n\nClick 'Process Request' to respond.")
+
+            # run the script on data arrival
+            with State.lock:
+                should_execute = State.ui.autorun
+            if should_execute:
+                self.execute_script()
+
             self.button.setDisabled(False)
