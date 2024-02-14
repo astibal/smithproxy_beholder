@@ -99,6 +99,7 @@ class MainWindow(QMainWindow):
             "# Available variables:\n"
             "#    content_data - bytes of content data received from the proxy\n"
             "#    content_replacement - None or bytes used by proxy to replace original content\n"
+            "#    auto_process - set to True to trigger 'Process' action after script finishes."
         )
         self.scriptEdit.textChanged.connect(self.on_script_changed)
 
@@ -186,7 +187,8 @@ class MainWindow(QMainWindow):
                     exported_data = {
                         "__name__": "__main__",
                         'content_data': copy.copy(State.ui.content_data),
-                        'content_replacement': None
+                        'content_replacement': None,
+                        'auto_process': False
                     }
 
                 # Execute the script
@@ -215,6 +217,9 @@ class MainWindow(QMainWindow):
                 print(f"Got replacement data: {len(State.ui.content_replacement)}B")
         else:
             print("no replacements this time")
+
+        if exported_data['auto_process']:
+            self.on_button_clicked()
 
     def update_display(self, data):
         print("update_display")
