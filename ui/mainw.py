@@ -4,7 +4,7 @@ import sys
 import copy
 
 from PyQt5.QtWidgets import QMainWindow, QPushButton, QVBoxLayout, QWidget, QTextEdit, QSplitter, \
-    QHBoxLayout, QCheckBox
+    QHBoxLayout, QCheckBox, QLabel
 from PyQt5.QtCore import Qt
 from PyQt5 import QtGui
 
@@ -75,12 +75,16 @@ class MainWindow(QMainWindow):
         self.skipConditionChkBox = QCheckBox('Skip', self)
         self.skipConditionChkBox.setCheckState(Qt.Checked)
         self.skipConditionChkBox.stateChanged.connect(self.on_skip_condition_toggled)
+        self.replacementLabel = QLabel()
+        self.replacementLabel.setText("No Replacement")
+        MainWindow.set_label_bg_color(self.replacementLabel, "LightGray")
 
         leftLayout.addWidget(self.textEdit)
 
         leftButtons = QHBoxLayout()
         leftButtons.addWidget(self.button)
         leftButtons.addWidget(self.skipConditionChkBox)
+        leftButtons.addWidget(self.replacementLabel)
         leftLayout.addLayout(leftButtons)
         leftContainer.setLayout(leftLayout)
 
@@ -100,6 +104,7 @@ class MainWindow(QMainWindow):
             "#    content_data - bytes of content data received from the proxy\n"
             "#    content_replacement - None or bytes used by proxy to replace original content\n"
             "#    auto_process - set to True to trigger 'Process' action after script finishes."
+            "\n\n"
         )
         self.scriptEdit.textChanged.connect(self.on_script_changed)
 
@@ -145,6 +150,9 @@ class MainWindow(QMainWindow):
             State.ui.content_data = None
         self.button.setDisabled(True)
 
+        MainWindow.set_label_bg_color(self.replacementLabel, "LightGray")
+        self.replacementLabel.setText("No replacement")
+
     def on_skip_condition_toggled(self, state):
         if state == Qt.CheckState.Checked:
             print("Checked")
@@ -165,6 +173,10 @@ class MainWindow(QMainWindow):
         else:
             with State.lock:
                 State.ui.autorun = False
+
+    @staticmethod
+    def set_label_bg_color(label: QLabel, color_name: str):
+        label.setStyleSheet(f'QLabel {{ background-color : {color_name}; }}')
 
     def validate_results(self, exported_data: dict):
         if exported_data['content_replacement']:
@@ -215,8 +227,12 @@ class MainWindow(QMainWindow):
             with State.lock:
                 State.ui.content_replacement = exported_data['content_replacement']
                 print(f"Got replacement data: {len(State.ui.content_replacement)}B")
+                self.replacementLabel.setText(f"replacement {len(exported_data['content_replacement'])}B")
+                MainWindow.set_label_bg_color(self.replacementLabel, "LightCoral")
         else:
             print("no replacements this time")
+            self.replacementLabel.setText(f"No replacement")
+            MainWindow.set_label_bg_color(self.replacementLabel, "LightGray")
 
         if exported_data['auto_process']:
             self.on_button_clicked()
@@ -243,3 +259,4 @@ class MainWindow(QMainWindow):
                 self.execute_script()
 
             self.button.setDisabled(False)
+
