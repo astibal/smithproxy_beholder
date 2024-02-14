@@ -100,6 +100,7 @@ class MainWindow(QMainWindow):
             "#    content_data - bytes of content data received from the proxy\n"
             "#    content_replacement - None or bytes used by proxy to replace original content\n"
         )
+        self.scriptEdit.textChanged.connect(self.on_script_changed)
 
         self.executeButton = QPushButton('Execute Script')
         self.executeButton.clicked.connect(self.execute_script)
@@ -153,6 +154,9 @@ class MainWindow(QMainWindow):
             with State.lock:
                 State.ui.skip_click = False
 
+    def on_script_changed(self):
+        self.autoRunCheckBox.setCheckState(Qt.Unchecked)
+
     def on_autorun_toggled(self, state):
         if state == Qt.CheckState.Checked:
             with State.lock:
@@ -172,6 +176,7 @@ class MainWindow(QMainWindow):
     def execute_script(self):
         # Get the script from scriptEdit
         script = self.scriptEdit.text()
+        output = ""
 
         # Use the capture_stdout_as_string context manager to capture output
         with capture_stdout_as_string() as captured_output:
@@ -191,7 +196,12 @@ class MainWindow(QMainWindow):
                 self.validate_results(exported_data)
 
             except Exception as e:
-                output = f"Error executing script: {e}"
+                was_checked = self.autoRunCheckBox.checkState() == Qt.Checked
+                self.autoRunCheckBox.setCheckState(Qt.Unchecked)
+                if was_checked:
+                    output += ">>> Auto-run was disabled\n"
+                output += f">>> Error executing script: {e}\n"
+                output += ">>>\n"
                 self.outputEdit.setText(output)
                 return
 
