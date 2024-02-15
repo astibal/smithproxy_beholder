@@ -59,55 +59,17 @@ class FlaskThread(QThread):
 
             try:
                 if payload["action"] == "access-request":
-                    print("::: action - access-request")
-                    result = "accept"
-                    if "2001:67c:68::76" in payload['details']['session']:
-                        result = "reject"
+                    return self.process_access_request(payload)
 
-                    return jsonify({
-                        "access-response": result
-                    }), 200
-                if payload["action"] == "connection-content":
-                    print("::: action - connection content")
+                elif payload["action"] == "connection-content":
+                    return self.process_connection_content(payload)
 
-                    reply_body = {
-                        "action": "none"
-                    }
+                elif payload["action"] == "connection-start":
+                    return self.process_connection_start(payload)
 
-                    try:
-                        reply_body["action"] = "replace"
-                        reply_body["content"] = payload['details']['info']['content']
+                elif payload["action"] == "connection-stop":
+                    return self.process_connection_stop(payload)
 
-                        with State.lock:
-                            wait_for_data = not State.ui.skip_click
-
-                        if wait_for_data:
-                            # data = request.get_json(force=True)
-                            data = request.get_data().decode()
-                            self.updated.emit(data)  # Emit signal with JSON data
-
-                            print("Now waiting for data")
-                            State.events.button_process.wait()  # Wait for the button to be clicked
-                            State.events.button_process.clear()  # Reset the event for the next API call
-                            print("Data received")
-
-                            with State.lock:
-                                if State.ui.content_replacement:
-                                    print(f"custom replacement detected: {len(State.ui.content_replacement)}B")
-
-                                    if isinstance(State.ui.content_replacement, str):
-                                        State.ui.content_replacement = bytes(State.ui.content_replacement, 'utf-8')
-
-                                    reply_body["content"] = base64.b64encode(State.ui.content_replacement).decode()
-                                    State.ui.content_replacement = None
-
-
-                    except KeyError:
-                        print("::: error, no 'content'")
-                        pass
-
-                    print(f"::: sending {reply_body}")
-                    return jsonify(reply_body), 200
 
             except KeyError as e:
                 print(f'KeyError: {e}')
@@ -115,6 +77,66 @@ class FlaskThread(QThread):
                 print(f'General exception: {gen_e}')
 
             return jsonify({"status": "success"}), 200
+
+    def process_access_request(self, payload):
+        print("::: action - access-request")
+        result = "accept"
+        if "2001:67c:68::76" in payload['details']['session']:
+            result = "reject"
+
+        return jsonify({
+            "access-response": result
+        }), 200
+
+    def process_connection_content(self, payload):
+        print("::: action - connection content")
+
+        reply_body = {
+            "action": "none"
+        }
+
+        try:
+            reply_body["action"] = "replace"
+            reply_body["content"] = payload['details']['info']['content']
+
+            with State.lock:
+                wait_for_data = not State.ui.skip_click
+
+            if wait_for_data:
+                # data = request.get_json(force=True)
+                data = request.get_data().decode()
+                self.updated.emit(data)  # Emit signal with JSON data
+
+                print("Now waiting for data")
+                State.events.button_process.wait()  # Wait for the button to be clicked
+                State.events.button_process.clear()  # Reset the event for the next API call
+                print("Data received")
+
+                with State.lock:
+                    if State.ui.content_replacement:
+                        print(f"custom replacement detected: {len(State.ui.content_replacement)}B")
+
+                        if isinstance(State.ui.content_replacement, str):
+                            State.ui.content_replacement = bytes(State.ui.content_replacement, 'utf-8')
+
+                        reply_body["content"] = base64.b64encode(State.ui.content_replacement).decode()
+                        State.ui.content_replacement = None
+
+
+        except KeyError:
+            print("::: error, no 'content'")
+            pass
+
+        print(f"::: sending {reply_body}")
+        return jsonify(reply_body), 200
+
+
+    def process_connection_start(self, payload):
+        return jsonify({}), 200
+
+    def process_connection_stop(self, payload):
+        return jsonify({}), 200
+
 
     def run(self):
         flask_app.run(port=5000, debug=False, use_reloader=False)
