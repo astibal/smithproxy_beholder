@@ -1,12 +1,12 @@
 import base64
+import copy
 import json
 import sys
-import copy
 
-from PyQt5.QtWidgets import QMainWindow, QPushButton, QVBoxLayout, QWidget, QTextEdit, QSplitter, \
-    QHBoxLayout, QCheckBox, QLabel
-from PyQt5.QtCore import Qt
 from PyQt5 import QtGui
+from PyQt5.QtCore import Qt
+from PyQt5.QtWidgets import QPushButton, QVBoxLayout, QWidget, QTextEdit, QSplitter, \
+    QHBoxLayout, QCheckBox, QLabel
 
 try:
     from PyQt5.Qsci import QsciScintilla, QsciLexerPython
@@ -51,7 +51,7 @@ class ContentWidget(QWidget):
 
         # Start the Flask thread
         self.flaskThread = ws.server.FlaskThread()
-        self.flaskThread.updated.connect(self.update_display)
+        self.flaskThread.received_content.connect(self.update_display)
         self.flaskThread.start()
 
     def initUI(self):

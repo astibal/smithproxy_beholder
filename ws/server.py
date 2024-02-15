@@ -18,7 +18,7 @@ flask_app = Flask(__name__)
 
 
 class FlaskThread(QThread):
-    updated = pyqtSignal(str)  # Signal to update the GUI
+    received_content = pyqtSignal(str)  # Signal to update content data
 
     def __init__(self):
         super().__init__()
@@ -32,7 +32,7 @@ class FlaskThread(QThread):
                 skip_click = State.ui.skip_click
 
             if not skip_click:
-                self.updated.emit(data)  # Emit signal with JSON data
+                self.received_content.emit(data)  # Emit signal with JSON data
                 State.events.button_process.wait()  # Wait for the button to be clicked
                 State.events.button_process.clear()  # Reset the event for the next API call
 
@@ -112,7 +112,7 @@ class FlaskThread(QThread):
             if wait_for_data:
                 # data = request.get_json(force=True)
                 data = request.get_data().decode()
-                self.updated.emit(data)  # Emit signal with JSON data
+                self.received_content.emit(data)  # Emit signal with JSON data
 
                 log.debug("Now waiting for data")
                 State.events.button_process.wait()  # Wait for the button to be clicked
