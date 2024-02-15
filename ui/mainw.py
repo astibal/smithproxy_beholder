@@ -20,6 +20,8 @@ from contextlib import contextmanager
 import ws.server
 from .state import State
 
+import logging
+log = logging.getLogger(__name__)
 
 @contextmanager
 def capture_stdout_as_string():
@@ -155,11 +157,11 @@ class MainWindow(QMainWindow):
 
     def on_skip_condition_toggled(self, state):
         if state == Qt.CheckState.Checked:
-            print("Checked")
+            log.debug("Checked")
             with State.lock:
                 State.ui.skip_click = True
         else:
-            print("UnChecked")
+            log.debug("UnChecked")
             with State.lock:
                 State.ui.skip_click = False
 
@@ -226,11 +228,11 @@ class MainWindow(QMainWindow):
         if exported_data['content_replacement']:
             with State.lock:
                 State.ui.content_replacement = exported_data['content_replacement']
-                print(f"Got replacement data: {len(State.ui.content_replacement)}B")
+                log.debug(f"Got replacement data: {len(State.ui.content_replacement)}B")
                 self.replacementLabel.setText(f"replacement {len(exported_data['content_replacement'])}B")
                 MainWindow.set_label_bg_color(self.replacementLabel, "LightCoral")
         else:
-            print("no replacements this time")
+            log.debug("no replacements this time")
             self.replacementLabel.setText(f"No replacement")
             MainWindow.set_label_bg_color(self.replacementLabel, "LightGray")
 
@@ -238,7 +240,7 @@ class MainWindow(QMainWindow):
             self.on_button_clicked()
 
     def update_display(self, data):
-        print("update_display")
+        log.debug("update_display")
         with State.lock:
             should_update = not State.ui.skip_click
 

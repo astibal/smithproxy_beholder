@@ -9,6 +9,10 @@ from PyQt5.QtCore import QThread, pyqtSignal, Qt
 from flask import Flask, request, jsonify
 from ui.state import State
 
+import logging
+
+log = logging.getLogger(__name__)
+
 # Create the Flask app
 flask_app = Flask(__name__)
 
@@ -44,18 +48,18 @@ class FlaskThread(QThread):
         @flask_app.route('/webhook/<string:key>', methods=['POST'])
         def webhook(key: str):
 
-            print(f"== Handler start:")
+            log.debug(f"== Handler start:")
             # some code to check key string
 
             # Process the incoming JSON payload
             payload = request.json
 
             # Replace the below line with your processing logic
-            print(f"== Received payload:")
-            print(payload)
-            print(f"== Pretty:")
-            pprint(payload)
-            print("==========")
+            log.info(f"== Received payload:")
+            log.debug(payload)
+            log.debug(f"== Pretty:")
+            log.debug(pformat(payload))
+            log.debug("==========")
 
             try:
                 if payload["action"] == "access-request":
@@ -70,16 +74,19 @@ class FlaskThread(QThread):
                 elif payload["action"] == "connection-stop":
                     return self.process_connection_stop(payload)
 
+                elif payload["action"] == "ping":
+                    return self.process_ping(payload)
+
 
             except KeyError as e:
-                print(f'KeyError: {e}')
+                log.error(f'KeyError: {e}')
             except Exception as gen_e:
-                print(f'General exception: {gen_e}')
+                log.error(f'General exception: {gen_e}')
 
             return jsonify({"status": "success"}), 200
 
     def process_access_request(self, payload):
-        print("::: action - access-request")
+        log.debug("::: action - access-request")
         result = "accept"
         if "2001:67c:68::76" in payload['details']['session']:
             result = "reject"
@@ -89,7 +96,7 @@ class FlaskThread(QThread):
         }), 200
 
     def process_connection_content(self, payload):
-        print("::: action - connection content")
+        log.debug("::: action - connection content")
 
         reply_body = {
             "action": "none"
@@ -107,14 +114,14 @@ class FlaskThread(QThread):
                 data = request.get_data().decode()
                 self.updated.emit(data)  # Emit signal with JSON data
 
-                print("Now waiting for data")
+                log.debug("Now waiting for data")
                 State.events.button_process.wait()  # Wait for the button to be clicked
                 State.events.button_process.clear()  # Reset the event for the next API call
-                print("Data received")
+                log.debug("Data received")
 
                 with State.lock:
                     if State.ui.content_replacement:
-                        print(f"custom replacement detected: {len(State.ui.content_replacement)}B")
+                        log.debug(f"custom replacement detected: {len(State.ui.content_replacement)}B")
 
                         if isinstance(State.ui.content_replacement, str):
                             State.ui.content_replacement = bytes(State.ui.content_replacement, 'utf-8')
@@ -124,19 +131,44 @@ class FlaskThread(QThread):
 
 
         except KeyError:
-            print("::: error, no 'content'")
+            log.error("::: error, no 'content'")
             pass
 
-        print(f"::: sending {reply_body}")
+        log.debug(f"::: sending {reply_body}")
         return jsonify(reply_body), 200
 
-
     def process_connection_start(self, payload):
+
+        session_label = payload["details"]["info"]["session"]
+        session_id = payload["id"]
+
+        with State.lock:
+            State.sessions.sessions.insert(session_id, session_label)
+            log.debug("session map:")
+            log.debug(str(State.sessions.sessions.forward))
+            log.debug(str(State.sessions.sessions.inverse))
+
         return jsonify({}), 200
 
     def process_connection_stop(self, payload):
+        session_id = payload["id"]
+        with State.lock:
+            State.sessions.sessions.remove(session_id)
+            log.debug("session map:")
+            log.debug(str(State.sessions.sessions.forward))
+            log.debug(str(State.sessions.sessions.inverse))
+
         return jsonify({}), 200
 
+    def process_ping(self, payload):
+
+        with State.lock:
+            for id in State.sessions.sessions.forward:
+                if payload['proxies'] and not id in payload['proxies']:
+                    log.debug(f"proxy {id} removed (ping)")
+                    State.sessions.sessions.remove(id)
+
+        return jsonify({}), 200
 
     def run(self):
         flask_app.run(port=5000, debug=False, use_reloader=False)

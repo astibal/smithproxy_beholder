@@ -1,4 +1,6 @@
 import threading
+from util.bidict import BiDict
+
 
 class State:
     # Shared data structure for response
@@ -10,7 +12,6 @@ class State:
         button_process = threading.Event()
 
     class ui:
-
         # should we just ignore everything and let webhooks flow with default answers
         skip_click: bool = True
         #
@@ -19,3 +20,6 @@ class State:
         # content bytes received
         content_data: bytes = None
         content_replacement: bytes = None
+
+    class sessions:
+        sessions = BiDict()
