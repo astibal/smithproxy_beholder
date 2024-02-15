@@ -18,7 +18,7 @@ except ImportError:
 from contextlib import contextmanager
 
 import ws.server
-from .state import State
+from .state import State, Global
 
 import logging
 log = logging.getLogger()
@@ -51,7 +51,7 @@ class ContentWidget(QWidget):
 
         # Start the Flask thread
         self.flaskThread = ws.server.FlaskThread()
-        self.flaskThread.received_content.connect(self.update_display)
+        self.flaskThread.received_content.connect(self.update_content_text)
         self.flaskThread.start()
 
         State.events.received_session_start.connect(self.on_session_start)
@@ -108,9 +108,22 @@ class ContentWidget(QWidget):
 
         self.scriptEdit.setText(
             "# Available variables:\n"
-            "#    content_data - bytes of content data received from the proxy\n"
-            "#    content_replacement - None or bytes used by proxy to replace original content\n"
-            "#    auto_process - set to True to trigger 'Process' action after script finishes."
+            "# -- INPUT variables --\n"
+            "#  content_data - bytes of content data received from the proxy\n"
+            "#  content_side - 'L' or 'R', if from client('L'), or server respectively ('R')\n"
+            "#  session_id - unique proxy session identifier\n"
+            "#  session_label - string containing IPs and ports\n"
+            "# -- STORAGE --\n"
+            "#  storage - dict with persistent memory data\n"
+            "#  storage_lock - always access storage with the lock! ('with storage_lock:')\n"
+            "# -- OUTPUT variables --\n"
+            "#  content_replacement - None or bytes used by proxy to replace original content\n"
+            "#  auto_process - set to True to trigger 'Process' action after script finishes."
+            "\n\n"
+            "# info function example:\n"
+            "def info():\n"
+            "    if content_data:\n"
+            "        print(f'{session_id}: {session_label} recv {len(content_data)}B from {content_side}')\n"
             "\n\n"
         )
         self.scriptEdit.textChanged.connect(self.on_script_changed)
@@ -223,6 +236,11 @@ class ContentWidget(QWidget):
                     exported_data = {
                         "__name__": "__main__",
                         'content_data': copy.copy(State.ui.content_tab.content_data),
+                        'content_side': State.ui.content_tab.content_side,
+                        'session_id': State.ui.content_tab.session_id,
+                        'session_label': State.ui.content_tab.session_label,
+                        'storage': Global.storage,
+                        'storage_lock': Global.lock,
                         'content_replacement': None,
                         'auto_process': False
                     }
@@ -261,7 +279,7 @@ class ContentWidget(QWidget):
         if exported_data['auto_process']:
             self.on_button_clicked()
 
-    def update_display(self, data):
+    def update_content_text(self, data):
         log.debug("update_display")
         with State.lock:
             should_update = not State.ui.skip_click

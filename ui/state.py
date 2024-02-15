@@ -2,6 +2,11 @@ import threading
 from util.bidict import BiDict
 from PyQt5 import QtCore
 
+
+class Global:
+    lock = threading.RLock()
+    storage = {}
+
 class State:
     # Shared data structure for response
     response_data = {"processed": False, "message": ""}
