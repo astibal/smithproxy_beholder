@@ -148,9 +148,13 @@ class FlaskThread(QThread):
             log.debug(str(State.sessions.sessions.forward))
             log.debug(str(State.sessions.sessions.inverse))
 
+        State.events.received_session_start.emit(session_id, session_label)
+
         return jsonify({}), 200
 
     def process_connection_stop(self, payload):
+
+        session_label = payload["details"]["info"]["session"]
         session_id = payload["id"]
         with State.lock:
             State.sessions.sessions.remove(session_id)
@@ -158,15 +162,21 @@ class FlaskThread(QThread):
             log.debug(str(State.sessions.sessions.forward))
             log.debug(str(State.sessions.sessions.inverse))
 
+        State.events.received_session_stop.emit(session_id, session_label)
+
         return jsonify({}), 200
 
     def process_ping(self, payload):
 
         with State.lock:
+            to_rem = []
             for id in State.sessions.sessions.forward:
                 if payload['proxies'] and not id in payload['proxies']:
-                    log.debug(f"proxy {id} removed (ping)")
-                    State.sessions.sessions.remove(id)
+                    to_rem.append(id)
+
+            for id in to_rem:
+                log.debug(f"proxy {id} removed (ping)")
+                State.sessions.sessions.remove(id)
 
         return jsonify({}), 200
 

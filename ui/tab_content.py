@@ -54,6 +54,9 @@ class ContentWidget(QWidget):
         self.flaskThread.received_content.connect(self.update_display)
         self.flaskThread.start()
 
+        State.events.received_session_start.connect(self.on_session_start)
+        State.events.received_session_stop.connect(self.on_session_stop)
+
     def initUI(self):
         # Main layout and splitter
         mainLayout = QHBoxLayout()
@@ -77,6 +80,8 @@ class ContentWidget(QWidget):
         self.replacementLabel = QLabel()
         self.replacementLabel.setText("No Replacement")
         ContentWidget.set_label_bg_color(self.replacementLabel, "LightGray")
+        self.connectionLabel = QLabel()
+        self.connectionLabel.setText("ConnState: ?")
 
         leftLayout.addWidget(self.textEdit)
 
@@ -84,6 +89,7 @@ class ContentWidget(QWidget):
         leftButtons.addWidget(self.button)
         leftButtons.addWidget(self.skipConditionChkBox)
         leftButtons.addWidget(self.replacementLabel)
+        leftButtons.addWidget(self.connectionLabel)
         leftLayout.addLayout(leftButtons)
         leftContainer.setLayout(leftLayout)
 
@@ -176,6 +182,17 @@ class ContentWidget(QWidget):
             with State.lock:
                 State.ui.autorun = False
 
+    def on_session_start(self, id: str, label: str):
+        log.debug(f"on_session_start: new session: {id}:{label}")
+
+
+    def on_session_stop(self, id: str, label: str):
+        log.debug(f"on_session_stop: closed session: {id}:{label}")
+        with State.lock:
+            died = State.ui.content_tab.session_id == id
+        if died:
+            self.connectionLabel.setText("ConState: CLOSED")
+
     @staticmethod
     def set_label_bg_color(label: QLabel, color_name: str):
         label.setStyleSheet(f'QLabel {{ background-color : {color_name}; }}')
@@ -200,7 +217,7 @@ class ContentWidget(QWidget):
                     State.ui.content_replacement = None
                     exported_data = {
                         "__name__": "__main__",
-                        'content_data': copy.copy(State.ui.content_data),
+                        'content_data': copy.copy(State.ui.content_tab.content_data),
                         'content_replacement': None,
                         'auto_process': False
                     }
@@ -245,14 +262,23 @@ class ContentWidget(QWidget):
             should_update = not State.ui.skip_click
 
         if should_update:
-            content = json.loads(data)['details']['info']['content']
+            js = json.loads(data)
+            content = js['details']['info']['content']
             content = base64.b64decode(content)
+            session_label = js['details']['info']['session']
+            session_side = js['details']['info']['side']
+            session_id = js['id']
+
             with State.lock:
-                State.ui.content_data = copy.copy(content)
+                State.ui.content_tab.content_data = copy.copy(content)
+                State.ui.content_tab.session_id = session_id
+                State.ui.content_tab.session_label = session_label
+                State.ui.content_tab.content_side = session_side
 
             content = print_bytes(content)
 
             self.textEdit.setText(f"Received data:\n\n{content}\n\nClick 'Process Request' to respond.")
+            self.connectionLabel.setText("ConState: LIVE")
 
             # run the script on data arrival
             with State.lock:
