@@ -21,7 +21,7 @@ import ws.server
 from .state import State
 
 import logging
-log = logging.getLogger(__name__)
+log = logging.getLogger()
 
 @contextmanager
 def capture_stdout_as_string():

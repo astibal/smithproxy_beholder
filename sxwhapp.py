@@ -4,9 +4,10 @@ import sys
 from PyQt5.QtWidgets import QApplication, QMainWindow, QTabWidget
 
 from ui.tab_content import ContentWidget
+from ui.tab_log import LogWidget
 
 logging.basicConfig(level=logging.DEBUG)
-log = logging.getLogger(__name__)
+log = logging.getLogger()
 
 
 class MainWindow(QMainWindow):
@@ -17,10 +18,13 @@ class MainWindow(QMainWindow):
         self.setGeometry(100, 100, 1200, 800)
 
         self.tab_widget = QTabWidget()
-        self.content_widget = ContentWidget()
         self.tab_widget.setTabPosition(QTabWidget.North)
 
+        self.content_widget = ContentWidget()
         self.tab_widget.addTab(self.content_widget, 'Content')
+
+        self.log_widget = LogWidget()
+        self.tab_widget.addTab(self.log_widget, 'Logs')
 
         self.setCentralWidget(self.tab_widget)
 
