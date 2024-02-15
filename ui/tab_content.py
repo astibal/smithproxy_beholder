@@ -43,12 +43,9 @@ def print_bytes(input_bytes):
     return ret
 
 
-class MainWindow(QMainWindow):
+class ContentWidget(QWidget):
     def __init__(self):
         super().__init__()
-
-        self.setWindowTitle('Smithproxy WebHook Application')
-        self.setGeometry(100, 100, 800, 400)
 
         self.initUI()
 
@@ -66,7 +63,7 @@ class MainWindow(QMainWindow):
         leftContainer = QWidget()
         leftLayout = QVBoxLayout()
         self.textEdit = QTextEdit()
-        font = QtGui.QFont("Courier", 11)  # "Courier" is a commonly available monospaced font
+        font = QtGui.QFont("Courier", 10)  # "Courier" is a commonly available monospaced font
         self.textEdit.setFont(font)
 
         self.textEdit.setReadOnly(True)
@@ -79,7 +76,7 @@ class MainWindow(QMainWindow):
         self.skipConditionChkBox.stateChanged.connect(self.on_skip_condition_toggled)
         self.replacementLabel = QLabel()
         self.replacementLabel.setText("No Replacement")
-        MainWindow.set_label_bg_color(self.replacementLabel, "LightGray")
+        ContentWidget.set_label_bg_color(self.replacementLabel, "LightGray")
 
         leftLayout.addWidget(self.textEdit)
 
@@ -130,13 +127,16 @@ class MainWindow(QMainWindow):
         # Add containers to splitter and set the main widget
         splitter.addWidget(leftContainer)
         splitter.addWidget(rightContainer)
-        splitter.setSizes([400, 400])
+        splitter.setSizes([650, 550])
 
         # Set the main layout
         mainWidget = QWidget()
         mainWidget.setLayout(mainLayout)
         mainLayout.addWidget(splitter)
-        self.setCentralWidget(mainWidget)
+        # self.setCentralWidget(mainWidget)
+
+        self.setLayout(mainLayout)
+
 
     def on_button_clicked(self):
         # Update shared data structure to be included in the Flask response
@@ -152,7 +152,7 @@ class MainWindow(QMainWindow):
             State.ui.content_data = None
         self.button.setDisabled(True)
 
-        MainWindow.set_label_bg_color(self.replacementLabel, "LightGray")
+        ContentWidget.set_label_bg_color(self.replacementLabel, "LightGray")
         self.replacementLabel.setText("No replacement")
 
     def on_skip_condition_toggled(self, state):
@@ -230,11 +230,11 @@ class MainWindow(QMainWindow):
                 State.ui.content_replacement = exported_data['content_replacement']
                 log.debug(f"Got replacement data: {len(State.ui.content_replacement)}B")
                 self.replacementLabel.setText(f"replacement {len(exported_data['content_replacement'])}B")
-                MainWindow.set_label_bg_color(self.replacementLabel, "LightCoral")
+                ContentWidget.set_label_bg_color(self.replacementLabel, "LightCoral")
         else:
             log.debug("no replacements this time")
             self.replacementLabel.setText(f"No replacement")
-            MainWindow.set_label_bg_color(self.replacementLabel, "LightGray")
+            ContentWidget.set_label_bg_color(self.replacementLabel, "LightGray")
 
         if exported_data['auto_process']:
             self.on_button_clicked()
