@@ -65,6 +65,7 @@ class ContentWidget(QWidget):
         # Left side components (Existing functionality)
         leftContainer = QWidget()
         leftLayout = QVBoxLayout()
+        self.conLabel = QLabel()
         self.textEdit = QTextEdit()
         font = QtGui.QFont("Courier", 10)  # "Courier" is a commonly available monospaced font
         self.textEdit.setFont(font)
@@ -80,16 +81,17 @@ class ContentWidget(QWidget):
         self.replacementLabel = QLabel()
         self.replacementLabel.setText("No Replacement")
         ContentWidget.set_label_bg_color(self.replacementLabel, "LightGray")
-        self.connectionLabel = QLabel()
-        self.connectionLabel.setText("ConnState: ?")
+        self.conStateLabel = QLabel()
+        self.conStateLabel.setText("ConnState: ?")
 
+        leftLayout.addWidget(self.conLabel)
         leftLayout.addWidget(self.textEdit)
 
         leftButtons = QHBoxLayout()
         leftButtons.addWidget(self.button)
         leftButtons.addWidget(self.skipConditionChkBox)
         leftButtons.addWidget(self.replacementLabel)
-        leftButtons.addWidget(self.connectionLabel)
+        leftButtons.addWidget(self.conStateLabel)
         leftLayout.addLayout(leftButtons)
         leftContainer.setLayout(leftLayout)
 
@@ -191,7 +193,10 @@ class ContentWidget(QWidget):
         with State.lock:
             died = State.ui.content_tab.session_id == id
         if died:
-            self.connectionLabel.setText("ConState: CLOSED")
+            self.conStateLabel.setText("ConState: CLOSED")
+            with State.lock:
+                label = State.ui.content_tab.session_label
+            self.conLabel.setText(f"(closed) {label}")
 
     @staticmethod
     def set_label_bg_color(label: QLabel, color_name: str):
@@ -278,7 +283,8 @@ class ContentWidget(QWidget):
             content = print_bytes(content)
 
             self.textEdit.setText(f"Received data:\n\n{content}\n\nClick 'Process Request' to respond.")
-            self.connectionLabel.setText("ConState: LIVE")
+            self.conStateLabel.setText("ConState: LIVE")
+            self.conLabel.setText(f"{session_label}")
 
             # run the script on data arrival
             with State.lock:
