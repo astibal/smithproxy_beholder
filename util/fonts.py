@@ -3,9 +3,10 @@ import re
 
 from PyQt5.QtGui import QFont, QFontDatabase
 
+
 def load_font_prog() -> QFont:
     preferred_fonts = ["Fira Code", "Source Code Pro", "Consolas",
-                       "Monoid", "Ubuntu Mono", "JetBrains Mono", "Hack" ]
+                       "Monoid", "Ubuntu Mono", "JetBrains Mono", "Hack"]
 
     font = QFont()  # creates a QFont object
     for pref_font in preferred_fonts:
@@ -18,6 +19,7 @@ def load_font_prog() -> QFont:
 
     font.setPointSize(10)
     return font
+
 
 def remove_ansi_color_codes(string: str) -> str:
     # ansi escape code pattern

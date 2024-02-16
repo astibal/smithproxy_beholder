@@ -1,15 +1,11 @@
 import base64
-import json
-import sys
-import threading
-from pprint import pprint, pformat
-
-from PyQt5.QtCore import QThread, pyqtSignal, Qt
-
-from flask import Flask, request, jsonify
-from ui.state import State
-
 import logging
+from pprint import pformat
+
+from PyQt5.QtCore import QThread, pyqtSignal
+from flask import Flask, request, jsonify
+
+from ui.state import State
 
 log = logging.getLogger(__name__)
 

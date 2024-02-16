@@ -1,12 +1,12 @@
-from PyQt5.QtWidgets import QMainWindow, QTabWidget, QMenuBar, QAction, QFileDialog
+import logging
 
-from ui.tab_content import ContentWidget
-from ui.tab_log import LogWidget
-from ui.mdviewer import MarkdownViewer, Text
+from PyQt5.QtWidgets import QMainWindow, QTabWidget, QAction, QFileDialog
 
 from ui.config import Config
+from ui.mdviewer import MarkdownViewer, Text
+from ui.tab_content import ContentWidget
+from ui.tab_log import LogWidget
 
-import logging
 logging.basicConfig(level=logging.DEBUG)
 log = logging.getLogger()
 
@@ -27,8 +27,6 @@ class MainWindow(QMainWindow):
         help_menu_content = QAction("Content", self)
         help_menu.addAction(help_menu_content)
         help_menu_content.triggered.connect(self.help_content)
-
-
 
         self.tab_widget = QTabWidget()
         self.tab_widget.setTabPosition(QTabWidget.North)
@@ -56,4 +54,3 @@ class MainWindow(QMainWindow):
         self.help_viewer.show()
         self.help_viewer.raise_()
         self.help_viewer.activateWindow()
-

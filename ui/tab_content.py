@@ -1,15 +1,16 @@
 import base64
 import copy
+import functools
 import json
 import sys
-import functools
 
-from PyQt5 import QtGui
 from PyQt5.QtCore import Qt
+from PyQt5.QtGui import QKeySequence
 from PyQt5.QtWidgets import QPushButton, QVBoxLayout, QWidget, QTextEdit, QSplitter, \
     QHBoxLayout, QCheckBox, QLabel, QShortcut
-from PyQt5.QtGui import QKeySequence
+
 from util.fonts import load_font_prog
+from ui.static_text import S
 
 try:
     from PyQt5.Qsci import QsciScintilla, QsciLexerPython
@@ -25,7 +26,9 @@ from .state import State, Global
 from .config import Config
 
 import logging
+
 log = logging.getLogger()
+
 
 @contextmanager
 def capture_stdout_as_string():
@@ -48,27 +51,8 @@ def print_bytes(input_bytes):
 
 
 class ContentWidget(QWidget):
-
     processButton: QPushButton | QPushButton
-    DEFAULT_SCRIPT = \
-            "# Available variables:\n" \
-            "# -- INPUT variables --\n" \
-            "#  content_data - bytes of content data received from the proxy\n" \
-            "#  content_side - 'L' or 'R', if from client('L'), or server respectively ('R')\n" \
-            "#  session_id - unique proxy session identifier\n" \
-            "#  session_label - string containing IPs and ports\n" \
-            "# -- STORAGE --\n" \
-            "#  storage - dict with persistent memory data\n" \
-            "#  storage_lock - always access storage with the lock! ('with storage_lock:')\n" \
-            "# -- OUTPUT variables --\n" \
-            "#  content_replacement - None or bytes used by proxy to replace original content\n" \
-            "#  auto_process - set to True to trigger 'Process' action after script finishes." \
-            "\n\n" \
-            "# info function example:\n" \
-            "def info():\n" \
-            "    if content_data:\n" \
-            "        print(f'{session_id}: {session_label} recv {len(content_data)}B from {content_side}')\n" \
-            "\n\n"
+    DEFAULT_SCRIPT = S.py_default_script
 
     def __init__(self):
         super().__init__()
@@ -103,7 +87,7 @@ class ContentWidget(QWidget):
         self.processButton.setDisabled(True)
 
         self.skipConditionChkBox = QCheckBox('Skip', self)
-        sc_skipConditionChkBox = QShortcut(QKeySequence(Qt.CTRL+Qt.Key_K), self)
+        sc_skipConditionChkBox = QShortcut(QKeySequence(Qt.CTRL + Qt.Key_K), self)
         sc_skipConditionChkBox.activated.connect(self.skipConditionChkBox.toggle)
 
         self.skipConditionChkBox.setCheckState(Qt.Checked)
@@ -119,7 +103,7 @@ class ContentWidget(QWidget):
 
         leftButtons = QHBoxLayout()
         leftButtons.addWidget(self.processButton)
-        sc_processButton = QShortcut(QKeySequence(Qt.CTRL+Qt.Key_P), self)
+        sc_processButton = QShortcut(QKeySequence(Qt.CTRL + Qt.Key_P), self)
         sc_processButton.activated.connect(self.processButton.click)
 
         leftButtons.addWidget(self.skipConditionChkBox)
@@ -146,7 +130,7 @@ class ContentWidget(QWidget):
 
         self.executeButton = QPushButton('Execute &Script')
         self.executeButton.clicked.connect(self.execute_script)
-        sc_exe_script = QShortcut(QKeySequence(Qt.CTRL + Qt.Key_S),self)
+        sc_exe_script = QShortcut(QKeySequence(Qt.CTRL + Qt.Key_S), self)
         sc_exe_script.activated.connect(self.executeButton.click)
 
         self.outputEdit = QTextEdit()
@@ -155,7 +139,7 @@ class ContentWidget(QWidget):
 
         rightLayoutTopButtons = QHBoxLayout()
         self.autoRunCheckBox = QCheckBox('Auto-&Execute', self)
-        sc_autorun = QShortcut(QKeySequence(Qt.CTRL+Qt.Key_E), self)
+        sc_autorun = QShortcut(QKeySequence(Qt.CTRL + Qt.Key_E), self)
         sc_autorun.activated.connect(self.autoRunCheckBox.toggle)
 
         self.autoRunCheckBox.stateChanged.connect(self.on_autorun_toggled)
@@ -164,19 +148,18 @@ class ContentWidget(QWidget):
 
         rightLayoutSlotButtons = QHBoxLayout()
         self.scriptSlots = []
-        for i in range(1,6):
+        for i in range(1, 6):
             button = QPushButton(f"#{i}")
             shortcut = QShortcut(QKeySequence(Qt.CTRL + Qt.Key_0 + i), self)
 
             button.clicked.connect(functools.partial(
-                    self.on_script_slot_button, i))
+                self.on_script_slot_button, i))
             shortcut.activated.connect(functools.partial(
-                    self.on_script_slot_button, i))
+                self.on_script_slot_button, i))
             self.scriptSlots.append(button)
 
             rightLayoutSlotButtons.addWidget(button)
         rightLayout.addLayout(rightLayoutSlotButtons)
-
 
         rightLayout.addWidget(self.scriptEdit)
         rightLayout.addWidget(self.executeButton)
@@ -195,7 +178,6 @@ class ContentWidget(QWidget):
         # self.setCentralWidget(mainWidget)
 
         self.setLayout(mainLayout)
-
 
     def on_button_clicked(self):
         # Update shared data structure to be included in the Flask response
@@ -239,7 +221,6 @@ class ContentWidget(QWidget):
 
     def on_session_start(self, id: str, label: str):
         log.debug(f"on_session_start: new session: {id}:{label}")
-
 
     def on_session_stop(self, id: str, label: str):
         log.debug(f"on_session_stop: closed session: {id}:{label}")

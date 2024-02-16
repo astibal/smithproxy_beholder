@@ -1,11 +1,14 @@
 import threading
-from util.bidict import BiDict
+
 from PyQt5 import QtCore
+
+from util.bidict import BiDict
 
 
 class Global:
     lock = threading.RLock()
     storage = {}
+
 
 class State:
     # Shared data structure for response
@@ -17,6 +20,7 @@ class State:
         button_process = threading.Event()
         received_session_start = QtCore.pyqtSignal(str, str)
         received_session_stop = QtCore.pyqtSignal(str, str)
+
     events = StateEvents()
 
     class ui:

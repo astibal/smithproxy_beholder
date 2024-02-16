@@ -13,6 +13,7 @@ class Config:
     config = None
     config_path = os.path.join(os.path.expanduser('~'), '.smithproxy')
     config_file = config_path + '/sxwhapp.json'
+
     @staticmethod
     def load_config():
         try:
@@ -25,7 +26,7 @@ class Config:
                         json.dump(Config.default_config, f)
 
                 with open(Config.config_file, 'r') as f:
-                     Config.config = json.load(f)
+                    Config.config = json.load(f)
         except FileNotFoundError as e:
             logging.fatal(f"Config.load_config: {e}")
 
@@ -37,7 +38,7 @@ class Config:
                     os.makedirs(Config.config_path, exist_ok=True)
 
                 with open(Config.config_file, 'w') as f:
-                     json.dump(Config.config, f)
+                    json.dump(Config.config, f)
         except FileNotFoundError as e:
             logging.fatal(f"Config.load_config: {e}")
 
@@ -48,7 +49,7 @@ class Config:
         if not os.path.exists(cnfp):
             os.makedirs(cnfp, exist_ok=True)
 
-        with open (os.path.join(cnfp, f'slot_{slot_number}.py'), 'w') as f:
+        with open(os.path.join(cnfp, f'slot_{slot_number}.py'), 'w') as f:
             f.write(content)
 
     def load_content_script(slot_number: int) -> str:
@@ -59,7 +60,7 @@ class Config:
             if not os.path.exists(cnfp):
                 os.makedirs(cnfp, exist_ok=True)
 
-            with open (os.path.join(cnfp, f'slot_{slot_number}.py'), 'r') as f:
+            with open(os.path.join(cnfp, f'slot_{slot_number}.py'), 'r') as f:
                 return f.read()
 
         except FileNotFoundError as e:
