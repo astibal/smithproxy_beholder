@@ -2,6 +2,7 @@ from PyQt5.QtWidgets import QMainWindow, QTabWidget, QMenuBar, QAction, QFileDia
 
 from ui.tab_content import ContentWidget
 from ui.tab_log import LogWidget
+from ui.mdviewer import MarkdownViewer, Text
 
 from ui.config import Config
 
@@ -22,6 +23,13 @@ class MainWindow(QMainWindow):
         project_menu.addAction(open_project_menu)
         open_project_menu.triggered.connect(self.open_project_dir)
 
+        help_menu = self.menuBar().addMenu('Help')
+        help_menu_content = QAction("Content", self)
+        help_menu.addAction(help_menu_content)
+        help_menu_content.triggered.connect(self.help_content)
+
+
+
         self.tab_widget = QTabWidget()
         self.tab_widget.setTabPosition(QTabWidget.North)
 
@@ -41,3 +49,11 @@ class MainWindow(QMainWindow):
         Config.save_config()
 
         self.content_widget.on_script_slot_button(1)
+
+    def help_content(self):
+        self.help_viewer = MarkdownViewer()
+        self.help_viewer.setMarkdown(Text.Help_ContentTab.markdown)
+        self.help_viewer.show()
+        self.help_viewer.raise_()
+        self.help_viewer.activateWindow()
+
