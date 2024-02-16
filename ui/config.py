@@ -40,3 +40,27 @@ class Config:
                      json.dump(Config.config, f)
         except FileNotFoundError as e:
             logging.fatal(f"Config.load_config: {e}")
+
+    def save_content_script(slot_number: int, content: str):
+        with Config.lock:
+            cnfp = Config.config['project_path']
+
+        if not os.path.exists(cnfp):
+            os.makedirs(cnfp, exist_ok=True)
+
+        with open (os.path.join(cnfp, f'slot_{slot_number}.py'), 'w') as f:
+            f.write(content)
+
+    def load_content_script(slot_number: int) -> str:
+        with Config.lock:
+            cnfp = Config.config['project_path']
+
+        try:
+            if not os.path.exists(cnfp):
+                os.makedirs(cnfp, exist_ok=True)
+
+            with open (os.path.join(cnfp, f'slot_{slot_number}.py'), 'r') as f:
+                return f.read()
+
+        except FileNotFoundError as e:
+            logging.error(f"Config.load_config: {e}")

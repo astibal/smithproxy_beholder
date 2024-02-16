@@ -34,5 +34,7 @@ class State:
             content_side: str
             content_replacement: bytes = None
 
+            current_script_slot: int = 1
+
     class sessions:
         sessions = BiDict()

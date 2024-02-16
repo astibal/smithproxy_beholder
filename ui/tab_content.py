@@ -20,6 +20,7 @@ from contextlib import contextmanager
 
 import ws.server
 from .state import State, Global
+from .config import Config
 
 import logging
 log = logging.getLogger()
@@ -200,6 +201,10 @@ class ContentWidget(QWidget):
 
     def on_script_changed(self):
         self.autoRunCheckBox.setCheckState(Qt.Unchecked)
+        with State.lock:
+            curslot = State.ui.content_tab.current_script_slot
+
+        Config.save_content_script(curslot, self.scriptEdit.text())
 
     def on_autorun_toggled(self, state):
         if state == Qt.CheckState.Checked:
@@ -324,6 +329,13 @@ class ContentWidget(QWidget):
 
             self.button.setDisabled(False)
 
-    def on_script_slot_button(self, index):
-        script = self.scriptSlots[index - 1].text()
-        self.scriptEdit.setText(script)
+    def on_script_slot_button(self, number):
+        # number - it's not index, it starts with 1
+        with State.lock:
+            State.ui.content_tab.current_script_slot = number
+
+        script_text = Config.load_content_script(number)
+        if not script_text:
+            script_text = self.scriptSlots[number - 1].text()
+
+        self.scriptEdit.setText(script_text)
