@@ -123,9 +123,10 @@ class ContentWidget(QWidget):
         lexer.setFont(font)
         self.scriptEdit.setLexer(lexer)
 
-        self.scriptEdit.setText(
-            Config.load_content_script(1)
-        )
+        sc1 = Config.load_content_script(1)
+        if not sc1: sc1 = S.py_default_script
+        self.scriptEdit.setText(sc1)
+
         self.scriptEdit.textChanged.connect(self.on_script_changed)
 
         self.executeButton = QPushButton('Execute &Script')
