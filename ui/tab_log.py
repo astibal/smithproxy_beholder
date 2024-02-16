@@ -1,7 +1,7 @@
 import logging
 
 from PyQt5 import QtGui, QtCore
-from PyQt5.QtWidgets import QVBoxLayout, QWidget, QTextEdit
+from PyQt5.QtWidgets import QVBoxLayout, QWidget, QTextEdit, QComboBox
 
 
 log = logging.getLogger()
@@ -35,6 +35,14 @@ class LogWidget(QWidget):
         layout = QVBoxLayout()
         layout.addWidget(self.logEdit)
 
+        self.logLevelDropDown = QComboBox(self)
+        self.logLevelDropDown.addItems(["DEBUG", "INFO", "WARNING"])
+        self.logLevelDropDown.currentTextChanged.connect(self.on_log_level)
+        self.logLevelDropDown.setFixedWidth(200)
+        self.logLevelDropDown.setCurrentText("INFO")
+        layout.addWidget(self.logLevelDropDown)
+
+
         # add logging to the widget
         self.widget_logger = WidgetLogger(self.logEdit)
         self.logEdit.setReadOnly(True)
@@ -43,3 +51,6 @@ class LogWidget(QWidget):
         log.addHandler(self.widget_logger)
 
         self.setLayout(layout)
+
+    def on_log_level(self, text):
+        log.setLevel(text)
