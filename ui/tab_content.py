@@ -2,6 +2,7 @@ import base64
 import copy
 import json
 import sys
+import functools
 
 from PyQt5 import QtGui
 from PyQt5.QtCore import Qt
@@ -138,8 +139,19 @@ class ContentWidget(QWidget):
         self.autoRunCheckBox = QCheckBox('Auto-Execute', self)
         self.autoRunCheckBox.stateChanged.connect(self.on_autorun_toggled)
         rightLayoutTopButtons.addWidget(self.autoRunCheckBox)
-
         rightLayout.addLayout(rightLayoutTopButtons)
+
+        rightLayoutSlotButtons = QHBoxLayout()
+        self.scriptSlots = []
+        for i in range(1,6):
+            button = QPushButton(f"#{i}")
+            button.clicked.connect(functools.partial(
+                    self.on_script_slot_button, i))
+            self.scriptSlots.append(button)
+            rightLayoutSlotButtons.addWidget(button)
+        rightLayout.addLayout(rightLayoutSlotButtons)
+
+
         rightLayout.addWidget(self.scriptEdit)
         rightLayout.addWidget(self.executeButton)
         rightLayout.addWidget(self.outputEdit)
@@ -312,3 +324,6 @@ class ContentWidget(QWidget):
 
             self.button.setDisabled(False)
 
+    def on_script_slot_button(self, index):
+        script = self.scriptSlots[index - 1].text()
+        self.scriptEdit.setText(script)
