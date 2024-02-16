@@ -49,6 +49,7 @@ def print_bytes(input_bytes):
 
 class ContentWidget(QWidget):
 
+    processButton: QPushButton | QPushButton
     DEFAULT_SCRIPT = \
             "# Available variables:\n" \
             "# -- INPUT variables --\n" \
@@ -97,11 +98,14 @@ class ContentWidget(QWidget):
         self.textEdit.setFont(font)
 
         self.textEdit.setReadOnly(True)
-        self.button = QPushButton('Process Request')
-        self.button.clicked.connect(self.on_button_clicked)
-        self.button.setDisabled(True)
+        self.processButton = QPushButton('Process Request')
+        self.processButton.clicked.connect(self.on_button_clicked)
+        self.processButton.setDisabled(True)
 
         self.skipConditionChkBox = QCheckBox('Skip', self)
+        sc_skipConditionChkBox = QShortcut(QKeySequence(Qt.CTRL+Qt.Key_K), self)
+        sc_skipConditionChkBox.activated.connect(self.skipConditionChkBox.toggle)
+
         self.skipConditionChkBox.setCheckState(Qt.Checked)
         self.skipConditionChkBox.stateChanged.connect(self.on_skip_condition_toggled)
         self.replacementLabel = QLabel()
@@ -114,7 +118,10 @@ class ContentWidget(QWidget):
         leftLayout.addWidget(self.textEdit)
 
         leftButtons = QHBoxLayout()
-        leftButtons.addWidget(self.button)
+        leftButtons.addWidget(self.processButton)
+        sc_processButton = QShortcut(QKeySequence(Qt.CTRL+Qt.Key_P), self)
+        sc_processButton.activated.connect(self.processButton.click)
+
         leftButtons.addWidget(self.skipConditionChkBox)
         leftButtons.addWidget(self.replacementLabel)
         leftButtons.addWidget(self.conStateLabel)
@@ -137,14 +144,20 @@ class ContentWidget(QWidget):
         )
         self.scriptEdit.textChanged.connect(self.on_script_changed)
 
-        self.executeButton = QPushButton('Execute Script')
+        self.executeButton = QPushButton('Execute &Script')
         self.executeButton.clicked.connect(self.execute_script)
+        sc_exe_script = QShortcut(QKeySequence(Qt.CTRL + Qt.Key_S),self)
+        sc_exe_script.activated.connect(self.executeButton.click)
+
         self.outputEdit = QTextEdit()
         self.outputEdit.setFont(font)
         self.outputEdit.setReadOnly(True)
 
         rightLayoutTopButtons = QHBoxLayout()
-        self.autoRunCheckBox = QCheckBox('Auto-Execute', self)
+        self.autoRunCheckBox = QCheckBox('Auto-&Execute', self)
+        sc_autorun = QShortcut(QKeySequence(Qt.CTRL+Qt.Key_E), self)
+        sc_autorun.activated.connect(self.autoRunCheckBox.toggle)
+
         self.autoRunCheckBox.stateChanged.connect(self.on_autorun_toggled)
         rightLayoutTopButtons.addWidget(self.autoRunCheckBox)
         rightLayout.addLayout(rightLayoutTopButtons)
@@ -153,9 +166,14 @@ class ContentWidget(QWidget):
         self.scriptSlots = []
         for i in range(1,6):
             button = QPushButton(f"#{i}")
+            shortcut = QShortcut(QKeySequence(Qt.CTRL + Qt.Key_0 + i), self)
+
             button.clicked.connect(functools.partial(
                     self.on_script_slot_button, i))
+            shortcut.activated.connect(functools.partial(
+                    self.on_script_slot_button, i))
             self.scriptSlots.append(button)
+
             rightLayoutSlotButtons.addWidget(button)
         rightLayout.addLayout(rightLayoutSlotButtons)
 
@@ -191,18 +209,16 @@ class ContentWidget(QWidget):
         self.textEdit.clear()
         with State.lock:
             State.ui.content_data = None
-        self.button.setDisabled(True)
+        self.processButton.setDisabled(True)
 
         ContentWidget.set_label_bg_color(self.replacementLabel, "LightGray")
         self.replacementLabel.setText("No replacement")
 
     def on_skip_condition_toggled(self, state):
         if state == Qt.CheckState.Checked:
-            log.debug("Checked")
             with State.lock:
                 State.ui.skip_click = True
         else:
-            log.debug("UnChecked")
             with State.lock:
                 State.ui.skip_click = False
 
@@ -334,7 +350,7 @@ class ContentWidget(QWidget):
             if should_execute:
                 self.execute_script()
 
-            self.button.setDisabled(False)
+            self.processButton.setDisabled(False)
 
     def on_script_slot_button(self, number):
         # number - it's not index, it starts with 1
