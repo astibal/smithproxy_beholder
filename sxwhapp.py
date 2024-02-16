@@ -12,7 +12,7 @@ if __name__ == "__main__":
     # Initialize and run the PyQt application
     qt_app = QApplication(sys.argv)
 
-    mainWindow = MainWindow()
     Config.load_config()
+    mainWindow = MainWindow()
     mainWindow.show()
     sys.exit(qt_app.exec_())

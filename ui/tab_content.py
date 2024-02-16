@@ -130,7 +130,7 @@ class ContentWidget(QWidget):
         self.scriptEdit.setLexer(lexer)
 
         self.scriptEdit.setText(
-            ContentWidget.DEFAULT_SCRIPT
+            Config.load_content_script(1)
         )
         self.scriptEdit.textChanged.connect(self.on_script_changed)
 
