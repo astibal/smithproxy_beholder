@@ -7,7 +7,9 @@ import functools
 from PyQt5 import QtGui
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QPushButton, QVBoxLayout, QWidget, QTextEdit, QSplitter, \
-    QHBoxLayout, QCheckBox, QLabel
+    QHBoxLayout, QCheckBox, QLabel, QShortcut
+from PyQt5.QtGui import QKeySequence
+from util.fonts import load_font_prog
 
 try:
     from PyQt5.Qsci import QsciScintilla, QsciLexerPython
@@ -90,7 +92,8 @@ class ContentWidget(QWidget):
         leftLayout = QVBoxLayout()
         self.conLabel = QLabel()
         self.textEdit = QTextEdit()
-        font = QtGui.QFont("Courier", 10)  # "Courier" is a commonly available monospaced font
+        font = load_font_prog()
+
         self.textEdit.setFont(font)
 
         self.textEdit.setReadOnly(True)

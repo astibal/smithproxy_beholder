@@ -3,6 +3,7 @@ import logging
 from PyQt5 import QtGui, QtCore
 from PyQt5.QtWidgets import QVBoxLayout, QWidget, QTextEdit, QComboBox
 
+from util.fonts import load_font_prog, remove_ansi_color_codes
 
 log = logging.getLogger()
 
@@ -20,8 +21,7 @@ class WidgetLogger(logging.Handler, QtCore.QObject):
         self.setFormatter(formatter)
 
     def emit(self, record):
-        msg = self.format(record)
-        # self.widget.append(msg)
+        msg = remove_ansi_color_codes(self.format(record))
         self.signal.emit(msg)
 
 class LogWidget(QWidget):
@@ -46,7 +46,8 @@ class LogWidget(QWidget):
         # add logging to the widget
         self.widget_logger = WidgetLogger(self.logEdit)
         self.logEdit.setReadOnly(True)
-        self.logEdit.setFont(QtGui.QFont("Courier", 10))
+        font = load_font_prog()
+        self.logEdit.setFont(font)
 
         log.addHandler(self.widget_logger)
 
