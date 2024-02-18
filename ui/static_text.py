@@ -1,4 +1,6 @@
 class S:
+    txt_skip_checked = "The 'Skip' button is now checked - all payload is silently confirmed"
+    txt_skip_unchecked = "Waiting for content from smithproxy to be processed..."
     py_default_script = \
         "# Available variables:\n" \
         "# -- INPUT variables --\n" \

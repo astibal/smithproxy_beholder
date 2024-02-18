@@ -82,6 +82,8 @@ class ContentWidget(QWidget):
         self.textEdit.setFont(font)
 
         self.textEdit.setReadOnly(True)
+        self.textEdit.setText(S.txt_skip_checked)
+
         self.processButton = QPushButton('Process Request')
         self.processButton.clicked.connect(self.on_button_clicked)
         self.processButton.setDisabled(True)
@@ -201,9 +203,11 @@ class ContentWidget(QWidget):
         if state == Qt.CheckState.Checked:
             with State.lock:
                 State.ui.skip_click = True
+                self.textEdit.setText(S.txt_skip_checked)
         else:
             with State.lock:
                 State.ui.skip_click = False
+                self.textEdit.setText(S.txt_skip_unchecked)
 
     def on_script_changed(self):
         self.autoRunCheckBox.setCheckState(Qt.Unchecked)
@@ -232,6 +236,7 @@ class ContentWidget(QWidget):
             with State.lock:
                 label = State.ui.content_tab.session_label
             self.conLabel.setText(f"(closed) {label}")
+            self.textEdit.setStyleSheet("QTextEdit { color: gray; }")
 
     @staticmethod
     def set_label_bg_color(label: QLabel, color_name: str):
@@ -322,7 +327,13 @@ class ContentWidget(QWidget):
 
             content = print_bytes(content)
 
-            self.textEdit.setText(f"Received data:\n\n{content}\n\nClick 'Process Request' to respond.")
+            self.textEdit.setText(f""
+                      f"Received data:\n\n{content}\n\n"
+                      f"1. You may run the script to modify content,\n"
+                      f"2. Click 'Process Request' to respond to confirm the payload.\n"
+                      f"3. Process can be automated:\n"
+                      f"      - 'Auto-Execute' check-box will run script on data arrival (1.)\n"
+                      f"      - setting 'auto_process' variable in the script (2.)")
             self.conStateLabel.setText("ConState: LIVE")
             self.conLabel.setText(f"{session_label}")
 
@@ -333,6 +344,7 @@ class ContentWidget(QWidget):
                 self.execute_script()
 
             self.processButton.setDisabled(False)
+            self.textEdit.setStyleSheet("")
 
     def on_script_slot_button(self, number):
         # number - it's not index, it starts with 1
