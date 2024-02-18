@@ -1,6 +1,7 @@
 import base64
 import logging
 from pprint import pformat
+import traceback
 
 from PyQt5.QtCore import QThread, pyqtSignal
 from flask import Flask, request, jsonify
@@ -76,8 +77,13 @@ class FlaskThread(QThread):
 
             except KeyError as e:
                 log.error(f'KeyError: {e}')
+                exception_traceback = traceback.format_exc()
+                log.debug(exception_traceback)
+
             except Exception as gen_e:
                 log.error(f'General exception: {gen_e}')
+                exception_traceback = traceback.format_exc()
+                log.debug(exception_traceback)
 
             return jsonify({"status": "success"}), 200
 
@@ -116,15 +122,19 @@ class FlaskThread(QThread):
                 log.debug("Data received")
 
                 with State.lock:
-                    if State.ui.content_replacement:
-                        log.debug(f"custom replacement detected: {len(State.ui.content_replacement)}B")
 
-                        if isinstance(State.ui.content_replacement, str):
-                            State.ui.content_replacement = bytes(State.ui.content_replacement, 'utf-8')
+                    cont = State.ui.content_tab.content_replacement
+                    if cont:
+                        if isinstance(cont, str):
+                            log.debug(f"custom replacement detected: {len(cont)}B")
+                            cont = bytes(cont, 'utf-8')
 
-                        reply_body["content"] = base64.b64encode(State.ui.content_replacement).decode()
-                        State.ui.content_replacement = None
+                        if isinstance(cont, bytes):
+                            reply_body["content"] = base64.b64encode(cont).decode()
+                        else:
+                            log.error("replacement not 'bytes' or 'str'")
 
+                        State.ui.content_tab.content_replacement = None
 
         except KeyError:
             log.error("::: error, no 'content'")

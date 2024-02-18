@@ -259,7 +259,7 @@ class ContentWidget(QWidget):
         with capture_stdout_as_string() as captured_output:
             try:
                 with State.lock:
-                    State.ui.content_replacement = None
+                    State.ui.content_tab.content_replacement = None
                     exported_data = {
                         "__name__": "__main__",
                         'content_data': copy.copy(State.ui.content_tab.content_data),
@@ -294,8 +294,8 @@ class ContentWidget(QWidget):
         # collect results
         if exported_data['content_replacement']:
             with State.lock:
-                State.ui.content_replacement = exported_data['content_replacement']
-                log.debug(f"Got replacement data: {len(State.ui.content_replacement)}B")
+                State.ui.content_tab.content_replacement = exported_data['content_replacement']
+                log.debug(f"Got replacement data: {len(State.ui.content_tab.content_replacement)}B")
                 self.replacementLabel.setText(f"replacement {len(exported_data['content_replacement'])}B")
                 ContentWidget.set_label_bg_color(self.replacementLabel, "LightCoral")
         else:
