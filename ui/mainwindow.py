@@ -21,7 +21,7 @@ class MainWindow(QMainWindow):
 
 
         with Config.lock:
-            tls_failed = Config.config['is_tls'] and not Config.ssl_context
+            tls_failed = Config.config['use_tls'] and not Config.ssl_context
 
         if tls_failed:
             m = QMessageBox(QMessageBox.Icon.Warning, "Error setting TLS server",

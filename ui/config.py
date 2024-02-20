@@ -42,7 +42,8 @@ class Config:
 
                 keyfile = Config.config['key_path']
                 certfile = Config.config['cert_path']
-                if Config.config['is_tls'] and  keyfile and certfile:
+
+                if Config.config['use_tls'] and  keyfile and certfile:
                     try:
                         cx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
                         cx.load_cert_chain(keyfile=keyfile, certfile=certfile)

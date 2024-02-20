@@ -19,7 +19,7 @@ class SettingsDialog(QDialog):
             self.address_field.setText(Config.config.get('address', ''))
             self.port_field.setText(str(Config.config.get('port', '')))
             self.api_key_field.setText(Config.config.get('api_key', ''))
-            self.tls_field.setChecked(Config.config.get('is_tls', False))
+            self.tls_field.setChecked(Config.config.get('use_tls', False))
             self.cert_field.setText(Config.config.get('cert_path', ''))
             self.key_field.setText(Config.config.get('key_path', ''))
 
@@ -98,7 +98,7 @@ class SettingsDialog(QDialog):
             "address": self.address_field.text(),
             "port": self.port_field.text(),
             "api_key": self.api_key_field.text(),
-            "is_tls":  self.tls_field.isChecked(),
+            "use_tls":  self.tls_field.isChecked(),
             "cert_path": self.cert_field.text(),
             "key_path": self.key_field.text()
         }
