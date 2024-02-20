@@ -30,12 +30,12 @@ class State:
         autorun: bool = False
 
         class content_tab:
-            session_id: str
-            session_label: str
+            session_id: str = None
+            session_label: str = None
 
             # content bytes received
             content_data: bytes = None
-            content_side: str
+            content_side: str = None
             content_replacement: bytes = None
 
             current_script_slot: int = 1
