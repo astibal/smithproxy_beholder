@@ -115,15 +115,11 @@ class ContentWidget(QWidget):
         leftCopyButtons.addWidget(self.copyAsPythonBytes)
         leftCopyButtons.addStretch(1)
 
-        self.copyToSample1 = QPushButton("Copy: S1")
-        self.copyToSample2 = QPushButton("Copy: S2")
-        self.copyToSample3 = QPushButton("Copy: S3")
-        self.copyToSample1.clicked.connect(functools.partial(self.on_copy_sample, 1))
-        self.copyToSample2.clicked.connect(functools.partial(self.on_copy_sample, 2))
-        self.copyToSample3.clicked.connect(functools.partial(self.on_copy_sample, 3))
-        leftCopyButtons.addWidget(self.copyToSample1)
-        leftCopyButtons.addWidget(self.copyToSample2)
-        leftCopyButtons.addWidget(self.copyToSample3)
+        for i in range(1,4):
+            self.copyToSampleX = QPushButton(f"Copy: S{i}")
+            self.copyToSampleX.clicked.connect(functools.partial(self.on_copy_sample, i))
+            leftCopyButtons.addWidget(self.copyToSampleX)
+
         leftCopyButtons.setAlignment(Qt.AlignLeft)
         leftLayout.addLayout(leftCopyButtons)
 
