@@ -113,6 +113,17 @@ class ContentWidget(QWidget):
         self.copyAsPythonBytes.clicked.connect(self.on_copy_pyby)
         leftCopyButtons.addWidget(self.copyAsTextButton)
         leftCopyButtons.addWidget(self.copyAsPythonBytes)
+        leftCopyButtons.addStretch(1)
+
+        self.copyToSample1 = QPushButton("Copy: S1")
+        self.copyToSample2 = QPushButton("Copy: S2")
+        self.copyToSample3 = QPushButton("Copy: S3")
+        self.copyToSample1.clicked.connect(functools.partial(self.on_copy_sample, 1))
+        self.copyToSample2.clicked.connect(functools.partial(self.on_copy_sample, 2))
+        self.copyToSample3.clicked.connect(functools.partial(self.on_copy_sample, 3))
+        leftCopyButtons.addWidget(self.copyToSample1)
+        leftCopyButtons.addWidget(self.copyToSample2)
+        leftCopyButtons.addWidget(self.copyToSample3)
         leftCopyButtons.setAlignment(Qt.AlignLeft)
         leftLayout.addLayout(leftCopyButtons)
 
@@ -283,6 +294,7 @@ class ContentWidget(QWidget):
                         'session_label': State.ui.content_tab.session_label,
                         'storage': Global.storage,
                         'storage_lock': Global.lock,
+                        'samples': Global.samples,
                         'content_replacement': None,
                         'auto_process': False
                     }
@@ -404,3 +416,9 @@ class ContentWidget(QWidget):
             m.exec()
             if "Linux" in platform.system():
                 log.info("To fix clipboard problem, consider to install: libgtk-3-dev")
+
+    def on_copy_sample(self, slot: int):
+        with Global.lock:
+            if State.ui.content_tab.content_data_last:
+                Global.samples[slot] = copy.copy(State.ui.content_tab.content_data_last)
+

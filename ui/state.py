@@ -8,7 +8,7 @@ from util.bidict import BiDict
 class Global:
     lock = threading.RLock()
     storage = {}
-
+    samples = {1: None, 2: None, 3: None}
 
 class State:
     # Shared data structure for response
