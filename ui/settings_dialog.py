@@ -1,5 +1,5 @@
 from PyQt5.QtWidgets import QApplication, QMainWindow, QAction, QDialog, QVBoxLayout, QLabel, QLineEdit, QPushButton, \
-    QMessageBox, QCheckBox
+    QMessageBox, QCheckBox, QStyle, QHBoxLayout, QFileDialog
 
 from ui.config import Config
 
@@ -35,14 +35,63 @@ class SettingsDialog(QDialog):
         layout.addWidget(self.api_key_field)
         layout.addWidget(QLabel("TLS?"))
         layout.addWidget(self.tls_field)
+
         layout.addWidget(QLabel("Certificate Path (optional)"))
-        layout.addWidget(self.cert_field)
+        certlayout = QHBoxLayout()
+        certlayout.addWidget(self.cert_field)
+        cert_filepicker = QPushButton()
+        cert_filepicker.setIcon(self.style().standardIcon(QStyle.SP_DialogOpenButton))
+        cert_filepicker.setFixedWidth(40)
+        cert_filepicker.clicked.connect(self.get_file_cert)
+        certlayout.addWidget(cert_filepicker)
+        layout.addLayout(certlayout)
+
         layout.addWidget(QLabel("Key Path (optional)"))
-        layout.addWidget(self.key_field)
+        keylayout = QHBoxLayout()
+        keylayout.addWidget(self.key_field)
+        key_filepicker = QPushButton()
+        key_filepicker.setIcon(self.style().standardIcon(QStyle.SP_DialogOpenButton))
+        key_filepicker.setFixedWidth(40)
+        key_filepicker.clicked.connect(self.get_file_key)
+        keylayout.addWidget(key_filepicker)
+        layout.addLayout(keylayout)
+
         layout.addWidget(save_button)
 
         self.setLayout(layout)
         self.setGeometry(300,300, 300, 400)
+
+    def get_file_cert(self):
+        f =  self.openFilePicker("Select Certificate",
+                                   "Certificate Files (*.pem);;All Files (*)")
+
+        if f:
+            self.cert_field.setText(f)
+
+    def get_file_key(self):
+        f =  self.openFilePicker("Select Certificate Key",
+                                   "PEM Files (*.pem);;All Files (*)")
+
+        if f:
+            self.key_field.setText(f)
+
+    def openFilePicker(self, title: str, filter: str) -> str:
+        # example filter: "Certificate Files (*.pem);;All Files (*)"
+        options = QFileDialog.Options()
+        options |= QFileDialog.ReadOnly
+
+        filt = "All Files (*)"
+        if filter:
+            filt = filter
+
+        dialog = QFileDialog()
+        dialog.setFileMode(QFileDialog.ExistingFile)
+        # dialog.setNameFilter('PEM Files (*.pem)')
+
+        fnm, _ = dialog.getOpenFileName(None, title, "", filt,
+                                             options=options)
+
+        return fnm
 
     def save_settings(self):
         config_patch = {
