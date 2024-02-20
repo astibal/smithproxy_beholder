@@ -35,6 +35,7 @@ class State:
 
             # content bytes received
             content_data: bytes = None
+            content_data_last: bytes = None
             content_side: str = None
             content_replacement: bytes = None
 
