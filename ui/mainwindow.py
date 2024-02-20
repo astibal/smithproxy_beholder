@@ -59,6 +59,11 @@ class MainWindow(QMainWindow):
 
     def open_project_dir(self):
         directory = QFileDialog.getExistingDirectory(None, "Select Directory")
+
+        # do not continue if Cancelled
+        if not directory:
+            return
+
         with Config.lock:
             Config.config['project_path'] = directory
 
