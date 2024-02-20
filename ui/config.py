@@ -1,18 +1,28 @@
+import copy
 import json
 import logging
 import os
 import threading
-
+import ssl
 
 class Config:
     lock = threading.RLock()
+    _default_app_dir = "SxWhApp"
 
     default_config = {
-        'project_path': os.path.join(os.path.expanduser('~'), 'SxWhApp'),
+        'project_path': os.path.join(os.path.expanduser('~'), _default_app_dir),
+        'address': '127.0.0.1',
+        'port': 5000,
+        'api_key': "123",
+        'use_tls': False,
+        'cert_path': os.path.join(os.path.expanduser('~'), _default_app_dir, 'cert.pem'),
+        'key_path': os.path.join(os.path.expanduser('~'), _default_app_dir, 'key.pem')
     }
-    config = None
+    config = {}
     config_path = os.path.join(os.path.expanduser('~'), '.smithproxy')
     config_file = config_path + '/sxwhapp.json'
+
+    ssl_context = None
 
     @staticmethod
     def load_config():
@@ -26,7 +36,20 @@ class Config:
                         json.dump(Config.default_config, f)
 
                 with open(Config.config_file, 'r') as f:
-                    Config.config = json.load(f)
+                    _def = copy.deepcopy(Config.default_config)
+                    _def.update(json.load(f))
+                    Config.config = _def
+
+                keyfile = Config.config['key_path']
+                certfile = Config.config['cert_path']
+                if Config.config['is_tls'] and  keyfile and certfile:
+                    try:
+                        cx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+                        cx.load_cert_chain(keyfile=keyfile, certfile=certfile)
+                        Config.ssl_context = cx
+                    except Exception as e:
+                        logging.error(f"error creating TLS context: {e}")
+
         except FileNotFoundError as e:
             logging.fatal(f"Config.load_config: {e}")
 
@@ -38,7 +61,7 @@ class Config:
                     os.makedirs(Config.config_path, exist_ok=True)
 
                 with open(Config.config_file, 'w') as f:
-                    json.dump(Config.config, f)
+                    json.dump(Config.config, f, indent=4)
         except FileNotFoundError as e:
             logging.fatal(f"Config.load_config: {e}")
 

@@ -1,12 +1,15 @@
 import base64
 import logging
+import ssl
 from pprint import pformat
 import traceback
 
 from PyQt5.QtCore import QThread, pyqtSignal
+from PyQt5.QtWidgets import QMessageBox
 from flask import Flask, request, jsonify
 
 from ui.state import State
+from ui.config import Config
 
 log = logging.getLogger(__name__)
 
@@ -20,30 +23,15 @@ class FlaskThread(QThread):
     def __init__(self):
         super().__init__()
 
-        @flask_app.route('/api/update', methods=['POST'])
-        def update():
-            # data = request.get_json(force=True)
-            data = request.get_data().decode()
-
-            with State.lock:
-                skip_click = State.ui.skip_click
-
-            if not skip_click:
-                self.received_content.emit(data)  # Emit signal with JSON data
-                State.events.button_process.wait()  # Wait for the button to be clicked
-                State.events.button_process.clear()  # Reset the event for the next API call
-
-            with State.lock:
-                return_data = State.response_data
-                return_data["processed"] = False
-                return_data["message"] = ""
-
-                return_data = jsonify(return_data)
-            # Reset shared data for the next request (optional based on your use case)
-            return return_data
-
         @flask_app.route('/webhook/<string:key>', methods=['POST'])
         def webhook(key: str):
+
+            with Config.lock:
+                api_key = Config.config["api_key"]
+
+            if api_key and key != api_key:
+                log.error(f"Invalid API key {key}")
+                return jsonify({"error": "Invalid API key"}), 400
 
             log.debug(f"== Handler start:")
             # some code to check key string
@@ -187,4 +175,19 @@ class FlaskThread(QThread):
         return jsonify({}), 200
 
     def run(self):
-        flask_app.run(port=5000, debug=False, use_reloader=False)
+        with Config.lock:
+            port = Config.config["port"]
+            addr = Config.config["address"]
+            tlsctx = Config.ssl_context
+
+        fallback = False
+        if tlsctx:
+            try:
+                flask_app.run(host=addr, port=port, debug=False, use_reloader=False, ssl_context=tlsctx)
+            except ssl.SSLError as e:
+                log.error(f"TLS error when starting server: {e}")
+                fallback = True
+
+        if not tlsctx or fallback:
+            flask_app.run(host=addr, port=port, debug=False, use_reloader=False)
+
