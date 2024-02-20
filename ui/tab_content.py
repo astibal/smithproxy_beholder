@@ -272,6 +272,10 @@ class ContentWidget(QWidget):
                         'auto_process': False
                     }
 
+                with Config.lock:
+                    # add possibility to import directly from project path
+                    sys.path.append(Config.config['project_path'])
+
                 # Execute the script
                 exec(script, exported_data)
                 # After script execution, captured_output.getvalue() contains the output
