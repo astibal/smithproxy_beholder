@@ -219,10 +219,10 @@ class ContentWidget(QWidget):
     def on_autorun_toggled(self, state):
         if state == Qt.CheckState.Checked:
             with State.lock:
-                State.ui.autorun = True
+                State.ui.content_tab.autorun = True
         else:
             with State.lock:
-                State.ui.autorun = False
+                State.ui.content_tab.autorun = False
 
     def on_session_start(self, id: str, label: str):
         log.debug(f"on_session_start: new session: {id}:{label}")
@@ -345,7 +345,7 @@ class ContentWidget(QWidget):
 
             # run the script on data arrival
             with State.lock:
-                should_execute = State.ui.autorun
+                should_execute = State.ui.content_tab.autorun
             if should_execute:
                 self.execute_script()
 

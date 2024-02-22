@@ -27,9 +27,10 @@ class State:
         # should we just ignore everything and let webhooks flow with default answers
         skip_click: bool = True
         #
-        autorun: bool = False
 
         class content_tab:
+            autorun: bool = False
+
             session_id: str = None
             session_label: str = None
 
@@ -40,6 +41,9 @@ class State:
             content_replacement: bytes = None
 
             current_script_slot: int = 1
+
+        class workbench_tab:
+            autorun: bool = False
 
     class sessions:
         sessions = BiDict()

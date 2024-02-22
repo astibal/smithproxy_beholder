@@ -168,16 +168,6 @@ class WorkbenchTab(QWidget):
         WorkbenchTab.set_label_bg_color(self.replacementLabel, "LightGray")
         self.replacementLabel.setText("No replacement")
 
-    def on_skip_condition_toggled(self, state):
-        if state == Qt.CheckState.Checked:
-            with State.lock:
-                State.ui.skip_click = True
-                self.textEdit.setText(S.txt_skip_checked)
-        else:
-            with State.lock:
-                State.ui.skip_click = False
-                self.textEdit.setText(S.txt_skip_unchecked)
-
     def on_script_changed(self):
         self.autoRunCheckBox.setCheckState(Qt.Unchecked)
         with State.lock:
@@ -188,10 +178,10 @@ class WorkbenchTab(QWidget):
     def on_autorun_toggled(self, state):
         if state == Qt.CheckState.Checked:
             with State.lock:
-                State.ui.autorun = True
+                State.ui.workbench_tab.autorun = True
         else:
             with State.lock:
-                State.ui.autorun = False
+                State.ui.workbench_tab.autorun = False
 
     def on_session_start(self, id: str, label: str):
         log.debug(f"on_session_start: new session: {id}:{label}")
