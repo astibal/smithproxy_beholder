@@ -5,6 +5,7 @@ from PyQt5.QtWidgets import QMainWindow, QTabWidget, QAction, QFileDialog, QMess
 from ui.config import Config
 from ui.mdviewer import MarkdownViewer, Text
 from ui.tab_content import ContentWidget
+from ui.tab_workbench import WorkbenchTab
 from ui.tab_log import LogWidget
 from ui.settings_dialog import SettingsDialog
 
@@ -50,6 +51,9 @@ class MainWindow(QMainWindow):
 
         self.content_widget = ContentWidget()
         self.tab_widget.addTab(self.content_widget, 'Content')
+
+        self.workbench_widget = WorkbenchTab()
+        self.tab_widget.addTab(self.workbench_widget, 'Workbench')
 
         self.log_widget = LogWidget()
         self.tab_widget.addTab(self.log_widget, 'Logs')

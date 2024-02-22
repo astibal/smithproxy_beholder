@@ -4,6 +4,7 @@ import functools
 import json
 import platform
 import sys
+import time
 
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QKeySequence
@@ -11,7 +12,6 @@ from PyQt5.QtWidgets import QPushButton, QVBoxLayout, QWidget, QTextEdit, QSplit
     QHBoxLayout, QCheckBox, QLabel, QShortcut, QMessageBox
 
 from util.fonts import load_font_prog
-from util.util import capture_stdout_as_string, print_bytes
 from ui.static_text import S
 
 try:
@@ -22,6 +22,8 @@ except ImportError:
     print("Ubuntu: apt-get install python3-pyqt5.qsci python3-pyperclip")
     sys.exit(1)
 
+from util.util import capture_stdout_as_string, print_bytes
+
 import ws.server
 from .state import State, Global
 from .config import Config
@@ -30,22 +32,14 @@ import logging
 
 log = logging.getLogger()
 
-class ContentWidget(QWidget):
-    processButton: QPushButton | QPushButton
+
+class WorkbenchTab(QWidget):
     DEFAULT_SCRIPT = S.py_default_script
 
     def __init__(self):
         super().__init__()
 
         self.initUI()
-
-        # Start the Flask thread
-        self.flaskThread = ws.server.FlaskThread()
-        self.flaskThread.received_content.connect(self.update_content_text)
-        self.flaskThread.start()
-
-        State.events.received_session_start.connect(self.on_session_start)
-        State.events.received_session_stop.connect(self.on_session_stop)
 
     def initUI(self):
         # Main layout and splitter
@@ -62,25 +56,7 @@ class ContentWidget(QWidget):
         self.textEdit.setFont(font)
 
         self.textEdit.setReadOnly(True)
-        self.textEdit.setText(S.txt_skip_checked)
-
-        self.processButton = QPushButton('Process Request')
-        self.processButton.clicked.connect(self.on_button_clicked)
-        self.processButton.setDisabled(True)
-
-        self.skipConditionChkBox = QCheckBox('Skip', self)
-        sc_skipConditionChkBox = QShortcut(QKeySequence(Qt.CTRL + Qt.Key_K), self)
-        sc_skipConditionChkBox.activated.connect(self.skipConditionChkBox.toggle)
-
-        self.skipConditionChkBox.setCheckState(Qt.Checked)
-        self.skipConditionChkBox.stateChanged.connect(self.on_skip_condition_toggled)
-        self.replacementLabel = QLabel()
-        self.replacementLabel.setText("No Replacement")
-        ContentWidget.set_label_bg_color(self.replacementLabel, "LightGray")
-        self.conStateLabel = QLabel()
-        self.conStateLabel.setText("ConnState: ?")
-
-        leftLayout.addWidget(self.conLabel)
+        self.textEdit.setText(S.txt_sample_empty)
 
         leftCopyButtons = QHBoxLayout()
         self.copyAsTextButton = QPushButton("Copy: Text")
@@ -94,9 +70,9 @@ class ContentWidget(QWidget):
         leftCopyButtons.addStretch(1)
 
         for i in range(1,4):
-            self.copyToSampleX = QPushButton(f"Copy: S{i}")
-            self.copyToSampleX.clicked.connect(functools.partial(self.on_copy_sample, i))
-            leftCopyButtons.addWidget(self.copyToSampleX)
+            self.loadSampleX = QPushButton(f"Load: S{i}")
+            self.loadSampleX.clicked.connect(functools.partial(self.on_load_sample, i))
+            leftCopyButtons.addWidget(self.loadSampleX)
 
         leftCopyButtons.setAlignment(Qt.AlignLeft)
         leftLayout.addLayout(leftCopyButtons)
@@ -104,13 +80,6 @@ class ContentWidget(QWidget):
         leftLayout.addWidget(self.textEdit)
 
         leftButtons = QHBoxLayout()
-        leftButtons.addWidget(self.processButton)
-        sc_processButton = QShortcut(QKeySequence(Qt.CTRL + Qt.Key_P), self)
-        sc_processButton.activated.connect(self.processButton.click)
-
-        leftButtons.addWidget(self.skipConditionChkBox)
-        leftButtons.addWidget(self.replacementLabel)
-        leftButtons.addWidget(self.conStateLabel)
         leftLayout.addLayout(leftButtons)
         leftContainer.setLayout(leftLayout)
 
@@ -196,7 +165,7 @@ class ContentWidget(QWidget):
             State.ui.content_data = None
         self.processButton.setDisabled(True)
 
-        ContentWidget.set_label_bg_color(self.replacementLabel, "LightGray")
+        WorkbenchTab.set_label_bg_color(self.replacementLabel, "LightGray")
         self.replacementLabel.setText("No replacement")
 
     def on_skip_condition_toggled(self, state):
@@ -295,62 +264,20 @@ class ContentWidget(QWidget):
 
         # Display the output in the outputEdit text box
         self.outputEdit.setText(output)
+        if exported_data['content_replacement']:
+            self.textEdit.setText(print_bytes(exported_data['content_replacement']))
 
         # collect results
         if exported_data['content_replacement']:
             with State.lock:
                 State.ui.content_tab.content_replacement = exported_data['content_replacement']
                 log.debug(f"Got replacement data: {len(State.ui.content_tab.content_replacement)}B")
-                self.replacementLabel.setText(f"replacement {len(exported_data['content_replacement'])}B")
-                ContentWidget.set_label_bg_color(self.replacementLabel, "LightCoral")
+                self.textEdit.setText(print_bytes(exported_data['content_replacement']))
         else:
             log.debug("no replacements this time")
-            self.replacementLabel.setText(f"No replacement")
-            ContentWidget.set_label_bg_color(self.replacementLabel, "LightGray")
 
         if exported_data['auto_process']:
             self.on_button_clicked()
-
-    def update_content_text(self, data):
-        log.debug("update_display")
-        with State.lock:
-            should_update = not State.ui.skip_click
-
-        if should_update:
-            js = json.loads(data)
-            content = js['details']['info']['content']
-            content = base64.b64decode(content)
-            session_label = js['details']['info']['session']
-            session_side = js['details']['info']['side']
-            session_id = js['id']
-
-            with State.lock:
-                State.ui.content_tab.content_data = copy.copy(content)
-                State.ui.content_tab.content_data_last = copy.copy(content)
-                State.ui.content_tab.session_id = session_id
-                State.ui.content_tab.session_label = session_label
-                State.ui.content_tab.content_side = session_side
-
-            content = print_bytes(content)
-
-            self.textEdit.setText(f""
-                      f"Received data:\n\n{content}\n\n"
-                      f"1. You may run the script to modify content,\n"
-                      f"2. Click 'Process Request' to respond to confirm the payload.\n"
-                      f"3. Process can be automated:\n"
-                      f"      - 'Auto-Execute' check-box will run script on data arrival (1.)\n"
-                      f"      - setting 'auto_process' variable in the script (2.)")
-            self.conStateLabel.setText("ConState: LIVE")
-            self.conLabel.setText(f"{session_label}")
-
-            # run the script on data arrival
-            with State.lock:
-                should_execute = State.ui.autorun
-            if should_execute:
-                self.execute_script()
-
-            self.processButton.setDisabled(False)
-            self.textEdit.setStyleSheet("")
 
     def on_script_slot_button(self, number):
         # number - it's not index, it starts with 1
@@ -360,7 +287,7 @@ class ContentWidget(QWidget):
         script_text = Config.load_content_script(number)
         if not script_text:
             if number == 1:
-                script_text = ContentWidget.DEFAULT_SCRIPT
+                script_text = WorkbenchTab.DEFAULT_SCRIPT
             else:
                 script_text = self.scriptSlots[number - 1].text()
 
@@ -391,8 +318,13 @@ class ContentWidget(QWidget):
             if "Linux" in platform.system():
                 log.info("To fix clipboard problem, consider to install: libgtk-3-dev")
 
-    def on_copy_sample(self, slot: int):
+    def on_load_sample(self, slot: int):
         with Global.lock:
-            if State.ui.content_tab.content_data_last:
-                Global.samples[slot] = copy.copy(State.ui.content_tab.content_data_last)
-
+            if Global.samples[slot]:
+                self.textEdit.setText(print_bytes(Global.samples[slot]))
+            else:
+                old = self.textEdit.toPlainText()
+                self.textEdit.setText(f"# slot {slot} empty")
+                # if old:
+                #     time.sleep(3)
+                #     self.textEdit.setText(old)
