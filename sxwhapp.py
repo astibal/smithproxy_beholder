@@ -8,6 +8,7 @@ from ui.mainwindow import MainWindow
 
 logging.basicConfig(level=logging.DEBUG)
 log = logging.getLogger()
+log.propagate = False
 
 if __name__ == "__main__":
     # Initialize and run the PyQt application

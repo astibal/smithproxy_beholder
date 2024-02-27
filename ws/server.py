@@ -11,19 +11,27 @@ from flask import Flask, request, jsonify
 from ui.state import State
 from ui.config import Config
 
-log = logging.getLogger(__name__)
-
-# Create the Flask app
-flask_app = Flask(__name__)
-
+log = logging.getLogger()
 
 class FlaskThread(QThread):
+    # Create the Flask app
+    app = None
     received_content = pyqtSignal(str)  # Signal to update content data
 
     def __init__(self):
         super().__init__()
 
-        @flask_app.route('/webhook/<string:key>', methods=['POST'])
+        # FlaskThread.app.logger.handlers = []
+        wzlog = logging.getLogger('werkzeug')
+        wzlog.propagate = False
+        wzlog.handlers = []
+        wzlog.setLevel("ERROR")
+
+        FlaskThread.app = Flask(__name__)
+        FlaskThread.app.logger.handlers = []
+        FlaskThread.app.logger.setLevel("ERROR")
+
+        @FlaskThread.app.route('/webhook/<string:key>', methods=['POST'])
         def webhook(key: str):
 
             with Config.lock:
@@ -40,7 +48,7 @@ class FlaskThread(QThread):
             payload = request.json
 
             # Replace the below line with your processing logic
-            log.info(f"== Received payload:")
+            log.debug(f"== Received payload:")
             log.debug(payload)
             log.debug(f"== Pretty:")
             log.debug(pformat(payload))
@@ -76,7 +84,10 @@ class FlaskThread(QThread):
             return jsonify({"status": "success"}), 200
 
     def process_access_request(self, payload):
-        log.debug("::: action - access-request")
+
+        session_label = payload["details"]["session"]
+        log.info(f"::: action - access-request - {session_label}")
+
         result = "accept"
         if "2001:67c:68::76" in payload['details']['session']:
             result = "reject"
@@ -86,7 +97,8 @@ class FlaskThread(QThread):
         }), 200
 
     def process_connection_content(self, payload):
-        log.debug("::: action - connection content")
+        session_label = payload["details"]["info"]["session"]
+        log.info(f"::: action - connection content - {session_label}")
 
         reply_body = {
             "action": "none"
@@ -134,6 +146,9 @@ class FlaskThread(QThread):
     def process_connection_start(self, payload):
 
         session_label = payload["details"]["info"]["session"]
+        log.info(f"::: action - connection start - {session_label}")
+
+        session_label = payload["details"]["info"]["session"]
         session_id = payload["id"]
 
         with State.lock:
@@ -147,6 +162,8 @@ class FlaskThread(QThread):
         return jsonify({}), 200
 
     def process_connection_stop(self, payload):
+        session_label = payload["details"]["info"]["session"]
+        log.info(f"::: action - connection stop - {session_label}")
 
         session_label = payload["details"]["info"]["session"]
         session_id = payload["id"]
@@ -161,6 +178,7 @@ class FlaskThread(QThread):
         return jsonify({}), 200
 
     def process_ping(self, payload):
+        log.info("::: action - ping")
 
         with State.lock:
             to_rem = []
@@ -183,11 +201,11 @@ class FlaskThread(QThread):
         fallback = False
         if tlsctx:
             try:
-                flask_app.run(host=addr, port=port, debug=False, use_reloader=False, ssl_context=tlsctx)
+                FlaskThread.app.run(host=addr, port=port, debug=False, use_reloader=False, ssl_context=tlsctx)
             except ssl.SSLError as e:
                 log.error(f"TLS error when starting server: {e}")
                 fallback = True
 
         if not tlsctx or fallback:
-            flask_app.run(host=addr, port=port, debug=False, use_reloader=False)
+            FlaskThread.app.run(host=addr, port=port, debug=False, use_reloader=False)
 

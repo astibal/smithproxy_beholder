@@ -69,7 +69,7 @@ class WorkbenchTab(QWidget):
         leftCopyButtons.addWidget(self.copyAsPythonBytes)
         leftCopyButtons.addStretch(1)
 
-        for i in range(1,4):
+        for i in range(1, 4):
             self.loadSampleX = QPushButton(f"Load: S{i}")
             self.loadSampleX.clicked.connect(functools.partial(self.on_load_sample, i))
             leftCopyButtons.addWidget(self.loadSampleX)
@@ -260,8 +260,7 @@ class WorkbenchTab(QWidget):
         # collect results
         if exported_data['content_replacement']:
             with State.lock:
-                State.ui.content_tab.content_replacement = exported_data['content_replacement']
-                log.debug(f"Got replacement data: {len(State.ui.content_tab.content_replacement)}B")
+                log.debug(f"Workbench: replacement data: {len(State.ui.content_tab.content_replacement)}B")
                 self.textEdit.setText(print_bytes(exported_data['content_replacement']))
         else:
             log.debug("no replacements this time")
