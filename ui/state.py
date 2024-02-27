@@ -9,6 +9,7 @@ class Global:
     lock = threading.RLock()
     storage = {}
     samples = {1: None, 2: None, 3: None}
+    samples_metadata = {1: {}, 2: {}, 3: {}}
 
 class State:
     # Shared data structure for response
@@ -44,6 +45,9 @@ class State:
 
         class workbench_tab:
             autorun: bool = False
+            current_sample = None
+            current_sample_key = 1
+            current_output = None
 
     class sessions:
         sessions = BiDict()

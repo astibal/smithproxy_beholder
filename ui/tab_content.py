@@ -269,9 +269,11 @@ class ContentWidget(QWidget):
                         'storage': Global.storage,
                         'storage_lock': Global.lock,
                         'samples': Global.samples,
+                        'samples_metadata': Global.samples_metadata,
                         'content_replacement': None,
                         'auto_process': False
                     }
+                    exported_data['__appvars__'] = exported_data
 
                 with Config.lock:
                     # add possibility to import directly from project path
@@ -388,4 +390,8 @@ class ContentWidget(QWidget):
         with Global.lock:
             if State.ui.content_tab.content_data_last:
                 Global.samples[slot] = copy.copy(State.ui.content_tab.content_data_last)
+                Global.samples_metadata[slot] = {}
+                Global.samples_metadata[slot]["session_id"] = State.ui.content_tab.session_id
+                Global.samples_metadata[slot]["session_label"] = State.ui.content_tab.session_label
+                Global.samples_metadata[slot]["content_side"] = State.ui.content_tab.content_side
 

@@ -11,6 +11,7 @@ class S:
         "#  session_label - string containing IPs and ports\n" \
         "# -- STORAGE --\n" \
         "#  samples - quick access to byte samples (dict(int), starting with 1)\n" \
+        "#  samples_metadata - quick access to samples metadata (dict(int)->{'session_id', ...}, starting with 1)\n" \
         "#  storage - dict with persistent memory data\n" \
         "#  storage_lock - always access storage with the lock! ('with storage_lock:')\n" \
         "# -- OUTPUT variables --\n" \

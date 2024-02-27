@@ -151,23 +151,6 @@ class WorkbenchTab(QWidget):
 
         self.setLayout(mainLayout)
 
-    def on_button_clicked(self):
-        # Update shared data structure to be included in the Flask response
-
-        with State.lock:
-            State.response_data["processed"] = True
-            State.response_data["message"] = "Request has been processed successfully."
-        # Signal the Flask thread that the button has been clicked
-        State.events.button_process.set()
-
-        self.textEdit.clear()
-        with State.lock:
-            State.ui.content_data = None
-        self.processButton.setDisabled(True)
-
-        WorkbenchTab.set_label_bg_color(self.replacementLabel, "LightGray")
-        self.replacementLabel.setText("No replacement")
-
     def on_script_changed(self):
         self.autoRunCheckBox.setCheckState(Qt.Unchecked)
         with State.lock:
@@ -182,24 +165,6 @@ class WorkbenchTab(QWidget):
         else:
             with State.lock:
                 State.ui.workbench_tab.autorun = False
-
-    def on_session_start(self, id: str, label: str):
-        log.debug(f"on_session_start: new session: {id}:{label}")
-
-    def on_session_stop(self, id: str, label: str):
-        log.debug(f"on_session_stop: closed session: {id}:{label}")
-        with State.lock:
-            died = State.ui.content_tab.session_id == id
-        if died:
-            self.conStateLabel.setText("ConState: CLOSED")
-            with State.lock:
-                label = State.ui.content_tab.session_label
-            self.conLabel.setText(f"(closed) {label}")
-            self.textEdit.setStyleSheet("QTextEdit { color: gray; }")
-
-    @staticmethod
-    def set_label_bg_color(label: QLabel, color_name: str):
-        label.setStyleSheet(f'QLabel {{ background-color : {color_name}; }}')
 
     def validate_results(self, exported_data: dict):
         if exported_data['content_replacement']:
@@ -218,19 +183,36 @@ class WorkbenchTab(QWidget):
         with capture_stdout_as_string() as captured_output:
             try:
                 with State.lock:
+                    sample_key = State.ui.workbench_tab.current_sample_key
+
+                with Global.lock:
+                    sample_meta = {}
+                    if sample_key in Global.samples_metadata.keys():
+                        hot_data = Global.samples_metadata[sample_key]
+                        if hot_data:
+                            sample_meta = copy.deepcopy(hot_data)
+
+                with State.lock:
+
+                    # reset results
                     State.ui.content_tab.content_replacement = None
+                    State.ui.workbench_tab.current_output = None
+
+                    # prepare shared data (fake live variables, default to None)
                     exported_data = {
                         "__name__": "__main__",
-                        'content_data': copy.copy(State.ui.content_tab.content_data),
-                        'content_side': State.ui.content_tab.content_side,
-                        'session_id': State.ui.content_tab.session_id,
-                        'session_label': State.ui.content_tab.session_label,
+                        'content_data': copy.copy(State.ui.workbench_tab.current_sample),
+                        'content_side': sample_meta.get('content_side', None),
+                        'session_id': sample_meta.get('session_id', None),
+                        'session_label': sample_meta.get('session_label', None),
                         'storage': Global.storage,
                         'storage_lock': Global.lock,
                         'samples': Global.samples,
+                        'samples_metadata': Global.samples_metadata,
                         'content_replacement': None,
                         'auto_process': False
                     }
+                    exported_data['__appvars__'] = exported_data
 
                 with Config.lock:
                     # add possibility to import directly from project path
@@ -255,18 +237,18 @@ class WorkbenchTab(QWidget):
         # Display the output in the outputEdit text box
         self.outputEdit.setText(output)
         if exported_data['content_replacement']:
-            self.textEdit.setText(print_bytes(exported_data['content_replacement']))
+            data = exported_data['content_replacement']
+            if isinstance(data, str):
+                data = data.encode()
 
-        # collect results
-        if exported_data['content_replacement']:
+            self.textEdit.setText(print_bytes(data))
+
             with State.lock:
-                log.debug(f"Workbench: replacement data: {len(State.ui.content_tab.content_replacement)}B")
-                self.textEdit.setText(print_bytes(exported_data['content_replacement']))
+                State.ui.workbench_tab.current_output = data
+                self.textEdit.setText(print_bytes(data))
         else:
             log.debug("no replacements this time")
 
-        if exported_data['auto_process']:
-            self.on_button_clicked()
 
     def on_script_slot_button(self, number):
         # number - it's not index, it starts with 1
@@ -285,8 +267,10 @@ class WorkbenchTab(QWidget):
     def on_copy_text(self):
         try:
             with State.lock:
-                if State.ui.content_tab.content_data_last:
-                    pyperclip.copy(print_bytes(State.ui.content_tab.content_data_last))
+                if State.ui.workbench_tab.current_output:
+                    pyperclip.copy(print_bytes(State.ui.workbench_tab.current_output))
+                elif State.ui.workbench_tab.current_sample:
+                    pyperclip.copy(print_bytes(State.ui.workbench_tab.current_sample))
 
         except ValueError as e:
             error_pyperclip()
@@ -294,19 +278,26 @@ class WorkbenchTab(QWidget):
     def on_copy_pyby(self):
         try:
             with State.lock:
-                if State.ui.content_tab.content_data_last:
-                    pyperclip.copy(repr(State.ui.content_tab.content_data_last))
+                if State.ui.workbench_tab.current_output:
+                    pyperclip.copy(repr(State.ui.workbench_tab.current_output))
+                elif State.ui.workbench_tab.current_sample:
+                    pyperclip.copy(repr(State.ui.workbench_tab.current_sample))
 
         except ValueError as e:
             error_pyperclip()
 
     def on_load_sample(self, slot: int):
+
+        data = None
+
         with Global.lock:
             if Global.samples[slot]:
-                self.textEdit.setText(print_bytes(Global.samples[slot]))
+                data = Global.samples[slot]
+                self.textEdit.setText(print_bytes(data))
             else:
-                old = self.textEdit.toPlainText()
                 self.textEdit.setText(f"# slot {slot} empty")
-                # if old:
-                #     time.sleep(3)
-                #     self.textEdit.setText(old)
+
+        with State.lock:
+            State.ui.workbench_tab.current_sample = data
+            State.ui.workbench_tab.current_sample_key = slot
+            State.ui.workbench_tab.current_output = None
