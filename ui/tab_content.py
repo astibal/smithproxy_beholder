@@ -2,15 +2,15 @@ import base64
 import copy
 import functools
 import json
-import platform
 import sys
 
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QKeySequence
 from PyQt5.QtWidgets import QPushButton, QVBoxLayout, QWidget, QTextEdit, QSplitter, \
-    QHBoxLayout, QCheckBox, QLabel, QShortcut, QMessageBox
+    QHBoxLayout, QCheckBox, QLabel, QShortcut
 
 from util.fonts import load_font_prog
+from util.err import error_pyperclip
 from util.util import capture_stdout_as_string, print_bytes
 from ui.static_text import S
 
@@ -366,7 +366,6 @@ class ContentWidget(QWidget):
 
         self.scriptEdit.setText(script_text)
 
-
     def on_copy_text(self):
         try:
             with State.lock:
@@ -374,10 +373,7 @@ class ContentWidget(QWidget):
                     pyperclip.copy(print_bytes(State.ui.content_tab.content_data_last))
 
         except ValueError as e:
-            m = QMessageBox(QMessageBox.Warning, "Clipboard Error", "cannot copy data to clipboard")
-            m.exec()
-            if "Linux" in platform.system():
-                log.info("To fix clipboard problem, consider to install: libgtk-3-dev")
+            error_pyperclip()
 
     def on_copy_pyby(self):
         try:
@@ -386,10 +382,7 @@ class ContentWidget(QWidget):
                     pyperclip.copy(repr(State.ui.content_tab.content_data_last))
 
         except ValueError as e:
-            m = QMessageBox(QMessageBox.Warning, "Clipboard Error", "cannot copy data to clipboard")
-            m.exec()
-            if "Linux" in platform.system():
-                log.info("To fix clipboard problem, consider to install: libgtk-3-dev")
+            error_pyperclip()
 
     def on_copy_sample(self, slot: int):
         with Global.lock:

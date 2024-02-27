@@ -23,8 +23,8 @@ except ImportError:
     sys.exit(1)
 
 from util.util import capture_stdout_as_string, print_bytes
+from util.err import error_pyperclip
 
-import ws.server
 from .state import State, Global
 from .config import Config
 
@@ -283,7 +283,6 @@ class WorkbenchTab(QWidget):
 
         self.scriptEdit.setText(script_text)
 
-
     def on_copy_text(self):
         try:
             with State.lock:
@@ -291,10 +290,7 @@ class WorkbenchTab(QWidget):
                     pyperclip.copy(print_bytes(State.ui.content_tab.content_data_last))
 
         except ValueError as e:
-            m = QMessageBox(QMessageBox.Warning, "Clipboard Error", "cannot copy data to clipboard")
-            m.exec()
-            if "Linux" in platform.system():
-                log.info("To fix clipboard problem, consider to install: libgtk-3-dev")
+            error_pyperclip()
 
     def on_copy_pyby(self):
         try:
@@ -303,10 +299,7 @@ class WorkbenchTab(QWidget):
                     pyperclip.copy(repr(State.ui.content_tab.content_data_last))
 
         except ValueError as e:
-            m = QMessageBox(QMessageBox.Warning, "Clipboard Error", "cannot copy data to clipboard")
-            m.exec()
-            if "Linux" in platform.system():
-                log.info("To fix clipboard problem, consider to install: libgtk-3-dev")
+            error_pyperclip()
 
     def on_load_sample(self, slot: int):
         with Global.lock:
