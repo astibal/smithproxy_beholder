@@ -6,6 +6,7 @@ from PyQt5.QtWidgets import QWidget, QVBoxLayout, QPushButton, QLineEdit, QTable
     QAbstractItemView, QShortcut
 from ui.asciitable import AsciiTable
 
+
 class HexEditorWidget(QWidget):
     data_updated = pyqtSignal()
 
@@ -27,7 +28,7 @@ class HexEditorWidget(QWidget):
         self.outputButton = QPushButton("Copy PyBy")
         self.layout.addWidget(self.outputButton)
 
-        self.loadButton.clicked.connect(self.loadData)
+        self.loadButton.clicked.connect(self.load_data)
         self.outputButton.clicked.connect(self.on_output_button)
 
         self.tableWidget.setRowCount(0)
@@ -63,12 +64,12 @@ class HexEditorWidget(QWidget):
         self.shortcut_t = QShortcut(QKeySequence(Qt.Key_F3), self)
         self.shortcut_t.activated.connect(self.t_pressed)
 
-    def loadData(self):
-        byteDataStr = self.inputLineEdit.text()
+    def load_data(self):
+        byte_data_str = self.inputLineEdit.text()
         try:
-            byteData = eval(byteDataStr, {"__builtins__": {}})
-            if isinstance(byteData, bytes):
-                self.loadBytes(byteData)
+            byte_data = eval(byte_data_str, {"__builtins__": {}})
+            if isinstance(byte_data, bytes):
+                self.load_bytes(byte_data)
             else:
                 print("Input is not a valid bytes object.")
         except (SyntaxError, NameError) as e:
@@ -83,13 +84,13 @@ class HexEditorWidget(QWidget):
         else:
             return f"{byte:02X}"
 
-    def loadBytes(self, byteData):
+    def load_bytes(self, byte_data: bytes | bytearray):
         self.tableWidget.clearContents()
-        rows = len(byteData) // 16 + (1 if len(byteData) % 16 else 0)
+        rows = len(byte_data) // 16 + (1 if len(byte_data) % 16 else 0)
         self.tableWidget.setRowCount(rows)
         self.tableWidget.setVerticalHeaderLabels([f"{16 * i:0002X}" for i in range(16)])
 
-        for i, byte in enumerate(byteData):
+        for i, byte in enumerate(byte_data):
 
             item = QTableWidgetItem(self.byte_string(byte))
             if 32 <= byte < 127:
@@ -99,7 +100,7 @@ class HexEditorWidget(QWidget):
 
         self.tableWidget.resizeColumnsToContents()
 
-    def cellByte(self, row: int, column: int):
+    def cell_byte(self, row: int, column: int):
         item = self.tableWidget.item(row, column)
         if item:
             str_item = item.text()
@@ -108,20 +109,20 @@ class HexEditorWidget(QWidget):
             else:
                 return ord(str_item)
 
-    def getBytes(self):
+    def get_bytes(self) -> bytes:
         bytesList = bytearray()
         for row in range(self.tableWidget.rowCount()):
             for column in range(self.tableWidget.columnCount()):
-                byte = self.cellByte(row, column)
+                byte = self.cell_byte(row, column)
                 if byte is not None:
                     bytesList.append(byte)
         return bytes(bytesList)
 
     def on_output_button(self):
-        bytes = self.getBytes()
-        self.inputLineEdit.setText(f"{repr(bytes)} : OUT")
+        bytes_ = self.get_bytes()
+        self.inputLineEdit.setText(f"{repr(bytes_)} : OUT")
 
-    def swapCellStyle(self, item):
+    def swap_cell_style(self, item):
         if item:
             row = item.row()
             col = item.column()
@@ -136,7 +137,7 @@ class HexEditorWidget(QWidget):
                 item.setText(f"{byte:02X}")
 
     def on_item_double_clicked(self, item):
-        self.swapCellStyle(item)
+        self.swap_cell_style(item)
 
     def insert_byte(self):
         # Get currently selected item's position.
@@ -145,9 +146,9 @@ class HexEditorWidget(QWidget):
         col = current_item.column()
         insert_pos = row * 16 + col
         # Insert a byte (e.g., 0) into the bytearray at the desired position.
-        data = bytearray(self.getBytes())
+        data = bytearray(self.get_bytes())
         data.insert(insert_pos, 0)
-        self.loadBytes(bytes(data))
+        self.load_bytes(bytes(data))
 
         self.tableWidget.setCurrentCell(row, col)
 
@@ -177,7 +178,6 @@ class HexEditorWidget(QWidget):
 
 
 if __name__ == "__main__":
-
     from PyQt5.QtWidgets import QApplication
 
 
@@ -191,6 +191,7 @@ if __name__ == "__main__":
 
         def on_new_data(self):
             pass
+
 
     app = QApplication(sys.argv)
     mainWindow = MainWindow()
