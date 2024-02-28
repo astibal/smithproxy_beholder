@@ -2,9 +2,9 @@ import sys
 
 from PyQt5.QtCore import pyqtSignal, Qt
 from PyQt5.QtGui import QColor, QKeySequence
-from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QPushButton, QLineEdit, QTableWidget, QTableWidgetItem, \
+from PyQt5.QtWidgets import QWidget, QVBoxLayout, QPushButton, QLineEdit, QTableWidget, QTableWidgetItem, \
     QAbstractItemView, QShortcut
-
+from ui.asciitable import AsciiTable
 
 class HexEditorWidget(QWidget):
     data_updated = pyqtSignal()
@@ -13,6 +13,7 @@ class HexEditorWidget(QWidget):
         super().__init__()
         self.indice_newline = []
         self.initUI()
+        self.editing = False
 
     def initUI(self):
         self.layout = QVBoxLayout(self)
@@ -58,6 +59,9 @@ class HexEditorWidget(QWidget):
 
         self.shortcut_esc = QShortcut(QKeySequence(Qt.Key_Escape), self)
         self.shortcut_esc.activated.connect(self.esc_pressed)
+
+        self.shortcut_t = QShortcut(QKeySequence(Qt.Key_F3), self)
+        self.shortcut_t.activated.connect(self.t_pressed)
 
     def loadData(self):
         byteDataStr = self.inputLineEdit.text()
@@ -165,10 +169,17 @@ class HexEditorWidget(QWidget):
             self.tableWidget.editItem(current_item)
         self.setFocus()
 
+    def t_pressed(self):
+        dialog = AsciiTable(self)
+        if dialog.exec_():
+            byte = dialog.selectedByte()
+            self.tableWidget.currentItem().setText(self.byte_string(byte))
+
 
 if __name__ == "__main__":
 
-    from PyQt5.QtWidgets import QApplication, QMainWindow
+    from PyQt5.QtWidgets import QApplication
+
 
     class MainWindow(QWidget):
         def __init__(self):
