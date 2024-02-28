@@ -9,11 +9,12 @@ from ui.asciitable import AsciiTable
 
 class HexEditorWidget(QWidget):
 
-    def __init__(self):
+    def __init__(self, columns: int = 16):
         super().__init__()
         self.indice_newline = []
-        self.initUI()
         self.editing = False
+        self.column_count = columns
+        self.initUI()
 
     def initUI(self):
         self.layout = QVBoxLayout(self)
@@ -21,11 +22,11 @@ class HexEditorWidget(QWidget):
         self.layout.addWidget(self.tableWidget)
 
         self.tableWidget.setRowCount(0)
-        self.tableWidget.setColumnCount(16)  # Display 16 bytes per row
+        self.tableWidget.setColumnCount(self.column_count)  # Display X bytes per row
         for i in range(self.tableWidget.columnCount()):
             self.tableWidget.setColumnWidth(i, 20)
 
-        self.tableWidget.setHorizontalHeaderLabels([f"{i:02X}" for i in range(16)])
+        self.tableWidget.setHorizontalHeaderLabels([f"{i:02X}" for i in range(self.column_count)])
         self.tableWidget.verticalHeader().setVisible(True)
         self.tableWidget.verticalHeader().setFixedWidth(40)
 
@@ -40,9 +41,6 @@ class HexEditorWidget(QWidget):
         self.tableWidget.doubleClicked.connect(self.on_item_double_clicked)
         self.shortcut_ins = QShortcut(QKeySequence(Qt.Key_Insert), self)
         self.shortcut_ins.activated.connect(self.insert_byte)
-
-        # self.shortcut_return = QShortcut(QKeySequence(Qt.Key_Return), self)
-        # self.shortcut_return.activated.connect(self.new_line)
 
         self.shortcut_f2 = QShortcut(QKeySequence(Qt.Key_F2), self)
         self.shortcut_f2.activated.connect(self.edit_current_cell)
@@ -64,9 +62,9 @@ class HexEditorWidget(QWidget):
 
     def load_bytes(self, byte_data: bytes | bytearray):
         self.tableWidget.clearContents()
-        rows = len(byte_data) // 16 + (1 if len(byte_data) % 16 else 0)
+        rows = len(byte_data) // self.column_count + (1 if len(byte_data) % self.column_count else 0)
         self.tableWidget.setRowCount(rows)
-        self.tableWidget.setVerticalHeaderLabels([f"{16 * i:0002X}" for i in range(16)])
+        self.tableWidget.setVerticalHeaderLabels([f"{self.column_count * i:0002X}" for i in range(self.column_count)])
 
         for i, byte in enumerate(byte_data):
 
@@ -74,7 +72,7 @@ class HexEditorWidget(QWidget):
             if 32 <= byte < 127:
                 item.setBackground(QColor(240, 255, 240))
 
-            self.tableWidget.setItem(i // 16, i % 16, item)
+            self.tableWidget.setItem(i // self.column_count, i % self.column_count, item)
 
         self.tableWidget.resizeColumnsToContents()
 
@@ -119,7 +117,7 @@ class HexEditorWidget(QWidget):
         current_item = self.tableWidget.currentItem()
         row = current_item.row()
         col = current_item.column()
-        insert_pos = row * 16 + col
+        insert_pos = row * self.column_count + col
         # Insert a byte (e.g., 0) into the bytearray at the desired position.
         data = bytearray(self.get_bytes())
         data.insert(insert_pos, 0)
@@ -132,7 +130,7 @@ class HexEditorWidget(QWidget):
         current_item = self.tableWidget.currentItem()
         row = current_item.row()
         col = current_item.column()
-        pos = row * 16 + col
+        pos = row * self.column_count + col
         self.indice_newline.append(pos)
 
     def edit_current_cell(self):
