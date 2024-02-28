@@ -1,9 +1,10 @@
 import sys
 
-from PyQt5.QtCore import pyqtSignal, Qt
+from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QColor, QKeySequence
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QPushButton, QLineEdit, QTableWidget, QTableWidgetItem, \
     QAbstractItemView, QShortcut, QMainWindow
+
 from ui.asciitable import AsciiTable
 
 
@@ -84,13 +85,13 @@ class HexEditorWidget(QWidget):
                 return ord(str_item)
 
     def get_bytes(self) -> bytes:
-        bytesList = bytearray()
+        byte_list = bytearray()
         for row in range(self.tableWidget.rowCount()):
             for column in range(self.tableWidget.columnCount()):
                 byte = self.cell_byte(row, column)
                 if byte is not None:
-                    bytesList.append(byte)
-        return bytes(bytesList)
+                    byte_list.append(byte)
+        return bytes(byte_list)
 
     def swap_cell_style(self, item):
         if item:
