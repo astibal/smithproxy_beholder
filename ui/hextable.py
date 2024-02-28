@@ -3,12 +3,11 @@ import sys
 from PyQt5.QtCore import pyqtSignal, Qt
 from PyQt5.QtGui import QColor, QKeySequence
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QPushButton, QLineEdit, QTableWidget, QTableWidgetItem, \
-    QAbstractItemView, QShortcut
+    QAbstractItemView, QShortcut, QMainWindow
 from ui.asciitable import AsciiTable
 
 
 class HexEditorWidget(QWidget):
-    data_updated = pyqtSignal()
 
     def __init__(self):
         super().__init__()
@@ -18,18 +17,8 @@ class HexEditorWidget(QWidget):
 
     def initUI(self):
         self.layout = QVBoxLayout(self)
-        self.inputLineEdit = QLineEdit()
-        self.loadButton = QPushButton("Load Data")
         self.tableWidget = QTableWidget()
-
-        self.layout.addWidget(self.inputLineEdit)
-        self.layout.addWidget(self.loadButton)
         self.layout.addWidget(self.tableWidget)
-        self.outputButton = QPushButton("Copy PyBy")
-        self.layout.addWidget(self.outputButton)
-
-        self.loadButton.clicked.connect(self.load_data)
-        self.outputButton.clicked.connect(self.on_output_button)
 
         self.tableWidget.setRowCount(0)
         self.tableWidget.setColumnCount(16)  # Display 16 bytes per row
@@ -64,18 +53,7 @@ class HexEditorWidget(QWidget):
         self.shortcut_t = QShortcut(QKeySequence(Qt.Key_F3), self)
         self.shortcut_t.activated.connect(self.t_pressed)
 
-    def load_data(self):
-        byte_data_str = self.inputLineEdit.text()
-        try:
-            byte_data = eval(byte_data_str, {"__builtins__": {}})
-            if isinstance(byte_data, bytes):
-                self.load_bytes(byte_data)
-            else:
-                print("Input is not a valid bytes object.")
-        except (SyntaxError, NameError) as e:
-            print(f"Invalid input: {e}")
 
-        self.data_updated.emit()
 
     @staticmethod
     def byte_string(byte):
@@ -118,9 +96,6 @@ class HexEditorWidget(QWidget):
                     bytesList.append(byte)
         return bytes(bytesList)
 
-    def on_output_button(self):
-        bytes_ = self.get_bytes()
-        self.inputLineEdit.setText(f"{repr(bytes_)} : OUT")
 
     def swap_cell_style(self, item):
         if item:
@@ -181,16 +156,43 @@ if __name__ == "__main__":
     from PyQt5.QtWidgets import QApplication
 
 
-    class MainWindow(QWidget):
+    class MainWindow(QMainWindow):
         def __init__(self):
             super().__init__()
+            self.main_widget = QWidget(parent=self)
+            self.setCentralWidget(self.main_widget)
+
+            self.layout = QVBoxLayout()
+            self.main_widget.setLayout(self.layout)
+
+            self.inputLineEdit = QLineEdit()
+            self.loadButton = QPushButton("Load Data")
+
+            self.layout.addWidget(self.inputLineEdit)
+            self.layout.addWidget(self.loadButton)
+            self.outputButton = QPushButton("Copy PyBy")
+            self.layout.addWidget(self.outputButton)
+
+            self.loadButton.clicked.connect(self.load_data)
+            self.outputButton.clicked.connect(self.on_output_button)
+
             self.hexEditorWidget = HexEditorWidget()
-            self.hexEditorWidget.data_updated.connect(self.on_new_data)
-            self.layout = QVBoxLayout(self)
             self.layout.addWidget(self.hexEditorWidget)
 
-        def on_new_data(self):
-            pass
+        def on_output_button(self):
+            bytes_ = self.hexEditorWidget.get_bytes()
+            self.inputLineEdit.setText(f"{repr(bytes_)} : OUT")
+
+        def load_data(self):
+            byte_data_str = self.inputLineEdit.text()
+            try:
+                byte_data = eval(byte_data_str, {"__builtins__": {}})
+                if isinstance(byte_data, bytes):
+                    self.hexEditorWidget.load_bytes(byte_data)
+                else:
+                    print("Input is not a valid bytes object.")
+            except (SyntaxError, NameError) as e:
+                print(f"Invalid input: {e}")
 
 
     app = QApplication(sys.argv)
