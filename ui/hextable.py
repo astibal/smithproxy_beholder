@@ -51,8 +51,6 @@ class HexEditorWidget(QWidget):
         self.shortcut_t = QShortcut(QKeySequence(Qt.Key_F3), self)
         self.shortcut_t.activated.connect(self.t_pressed)
 
-
-
     @staticmethod
     def byte_string(byte):
         if 32 <= byte < 127:
@@ -93,7 +91,6 @@ class HexEditorWidget(QWidget):
                 if byte is not None:
                     bytesList.append(byte)
         return bytes(bytesList)
-
 
     def swap_cell_style(self, item):
         if item:
