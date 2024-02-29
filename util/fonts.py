@@ -2,6 +2,7 @@ import logging
 import re
 
 from PyQt5.QtGui import QFont, QFontDatabase
+from PyQt5.QtWidgets import QApplication
 
 
 def load_font_prog() -> QFont:
@@ -17,9 +18,10 @@ def load_font_prog() -> QFont:
     else:  # if none of the preferred fonts match exactly
         font.setFamily("Courier New")  # then set font to Courier New
 
-    font.setPointSize(10)
+    font.setPointSize(default_font_size())
     return font
-
+def default_font_size():
+    return QApplication.font().pointSize()
 
 def remove_ansi_color_codes(string: str) -> str:
     # ansi escape code pattern

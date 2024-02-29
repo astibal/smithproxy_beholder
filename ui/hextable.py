@@ -1,12 +1,14 @@
 import sys
 
-from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QColor, QKeySequence
+from PyQt5 import QtGui
+from PyQt5.QtCore import Qt, QSize
+from PyQt5.QtGui import QColor, QKeySequence, QFontMetrics
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QPushButton, QLineEdit, QTableWidget, QTableWidgetItem, \
-    QAbstractItemView, QShortcut, QMainWindow
+    QAbstractItemView, QShortcut, QMainWindow, QHeaderView, QDialogButtonBox, QHBoxLayout
 
 from ui.asciitable import AsciiTable
 
+from util.fonts import load_font_prog
 
 class HexEditorWidget(QWidget):
 
@@ -20,24 +22,39 @@ class HexEditorWidget(QWidget):
     def initUI(self):
         self.layout = QVBoxLayout(self)
         self.tableWidget = QTableWidget()
+
+        self.buttonBox = QHBoxLayout()
+        self.buttonBox.setAlignment(Qt.AlignLeft)
+        self.fontButtonPlus = QPushButton("+F")
+        self.fontButtonPlus.setMaximumWidth(40)
+        self.fontButtonPlus.clicked.connect(self.font_plus)
+
+        self.fontButtonMinus = QPushButton("-F")
+        self.fontButtonMinus.setMaximumWidth(40)
+        self.fontButtonMinus.clicked.connect(self.font_minus)
+
+        self.buttonBox.addWidget(self.fontButtonPlus)
+        self.buttonBox.addWidget(self.fontButtonMinus)
+        self.layout.addLayout(self.buttonBox)
+
+        self.used_font = load_font_prog()
+        self.used_font.setPointSize(13)  # Smaller font size = less cell padding
+        self.tableWidget.setFont(self.used_font)
+
         self.layout.addWidget(self.tableWidget)
 
         self.tableWidget.setRowCount(0)
         self.tableWidget.setColumnCount(self.column_count)  # Display X bytes per row
-        for i in range(self.tableWidget.columnCount()):
-            self.tableWidget.setColumnWidth(i, 20)
-
         self.tableWidget.setHorizontalHeaderLabels([f"{i:02X}" for i in range(self.column_count)])
         self.tableWidget.verticalHeader().setVisible(True)
-        self.tableWidget.verticalHeader().setFixedWidth(40)
-
-        self.tableWidget.setEditTriggers(QAbstractItemView.NoEditTriggers)
-        self.tableWidget.setSelectionMode(QAbstractItemView.NoSelection)
-        self.tableWidget.resizeColumnsToContents()
 
         self.tableWidget.setStyleSheet("QTableView {"
                                        "gridline-color: #f0f0f0 "
                                        "}")
+
+        self.resize_table()
+
+
 
         self.tableWidget.doubleClicked.connect(self.on_item_double_clicked)
         self.shortcut_ins = QShortcut(QKeySequence(Qt.Key_Insert), self)
@@ -51,6 +68,28 @@ class HexEditorWidget(QWidget):
 
         self.shortcut_t = QShortcut(QKeySequence(Qt.Key_F3), self)
         self.shortcut_t.activated.connect(self.t_pressed)
+
+    def resize_table(self):
+        font_metric = QFontMetrics(self.used_font)
+        self.tableWidget.horizontalHeader().setMinimumSectionSize(3* font_metric.width("X"))
+        self.tableWidget.horizontalHeader().setDefaultSectionSize(4* font_metric.width("X"))
+
+        self.tableWidget.verticalHeader().setDefaultSectionSize(font_metric.height())
+
+        self.tableWidget.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        self.tableWidget.setSelectionMode(QAbstractItemView.NoSelection)
+        self.tableWidget.resizeColumnsToContents()
+
+    def font_plus(self):
+        self.used_font.setPointSize(self.used_font.pointSize()+1)
+        self.tableWidget.setFont(self.used_font)
+        self.resize_table()
+
+    def font_minus(self):
+        self.used_font.setPointSize(self.used_font.pointSize()-1)
+        self.tableWidget.setFont(self.used_font)
+        self.resize_table()
+
 
     @staticmethod
     def byte_string(byte):
@@ -72,8 +111,6 @@ class HexEditorWidget(QWidget):
                 item.setBackground(QColor(240, 255, 240))
 
             self.tableWidget.setItem(i // self.column_count, i % self.column_count, item)
-
-        self.tableWidget.resizeColumnsToContents()
 
     def cell_byte(self, row: int, column: int):
         item = self.tableWidget.item(row, column)
