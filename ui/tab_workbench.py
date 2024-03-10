@@ -13,6 +13,7 @@ from PyQt5.QtWidgets import QPushButton, QVBoxLayout, QWidget, QTextEdit, QSplit
 
 from util.fonts import load_font_prog
 from ui.static_text import S
+from .common import create_python_editor
 
 try:
     from PyQt5.Qsci import QsciScintilla, QsciLexerPython
@@ -99,11 +100,8 @@ class WorkbenchTab(QWidget):
         rightTopLayout = QVBoxLayout()
         rightBottomLayout = QVBoxLayout()
         lexer = QsciLexerPython()
-        self.scriptEdit = QsciScintilla()
+        self.scriptEdit = create_python_editor()
         lexer.setFont(font)
-        self.scriptEdit.setLexer(lexer)
-        self.scriptEdit.setIndentationsUseTabs(False)
-        self.scriptEdit.setTabWidth(4)
 
         sc1 = Config.load_content_script(1)
         if not sc1: sc1 = S.py_default_script

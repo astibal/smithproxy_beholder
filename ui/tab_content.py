@@ -13,6 +13,7 @@ from util.fonts import load_font_prog
 from util.err import error_pyperclip
 from util.util import capture_stdout_as_string, print_bytes
 from ui.static_text import S
+from .common import create_python_editor
 
 try:
     from PyQt5.Qsci import QsciScintilla, QsciLexerPython
@@ -130,14 +131,7 @@ class ContentWidget(QWidget):
         rightTopLayout = QVBoxLayout()
         rightBottomLayout = QVBoxLayout()
 
-        # self.scriptEdit = QTextEdit()
-        # self.scriptEdit.setFont(font)
-        lexer = QsciLexerPython()
-        self.scriptEdit = QsciScintilla()
-        lexer.setFont(font)
-        self.scriptEdit.setLexer(lexer)
-        self.scriptEdit.setIndentationsUseTabs(False)
-        self.scriptEdit.setTabWidth(4)
+        self.scriptEdit = create_python_editor()
 
         sc1 = Config.load_content_script(1)
         if not sc1: sc1 = S.py_default_script
