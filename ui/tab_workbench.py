@@ -57,6 +57,9 @@ class WorkbenchTab(QWidget):
 
         self.textEdit.setReadOnly(True)
         self.textEdit.setText(S.txt_sample_empty)
+        self.textEdit.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        self.textEdit.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        self.textEdit.setLineWrapMode(QTextEdit.NoWrap)
 
         leftCopyButtons = QHBoxLayout()
         self.copyAsTextButton = QPushButton("Copy: Text")
@@ -84,15 +87,23 @@ class WorkbenchTab(QWidget):
         leftContainer.setLayout(leftLayout)
 
         # Right side components (New functionality for script execution)
-        rightContainer = QWidget()
-        rightLayout = QVBoxLayout()
+        rightContainerSplitter = QSplitter(Qt.Vertical)
+        rightTopContainer = QWidget()
+        rightBottomContainer = QWidget()
 
-        # self.scriptEdit = QTextEdit()
-        # self.scriptEdit.setFont(font)
+        rightContainerSplitter.addWidget(rightTopContainer)
+        rightContainerSplitter.addWidget(rightBottomContainer)
+        rightContainerSplitter.setStretchFactor(0, 80)
+        rightContainerSplitter.setStretchFactor(1, 20)
+
+        rightTopLayout = QVBoxLayout()
+        rightBottomLayout = QVBoxLayout()
         lexer = QsciLexerPython()
         self.scriptEdit = QsciScintilla()
         lexer.setFont(font)
         self.scriptEdit.setLexer(lexer)
+        self.scriptEdit.setIndentationsUseTabs(False)
+        self.scriptEdit.setTabWidth(4)
 
         sc1 = Config.load_content_script(1)
         if not sc1: sc1 = S.py_default_script
@@ -116,7 +127,7 @@ class WorkbenchTab(QWidget):
 
         self.autoRunCheckBox.stateChanged.connect(self.on_autorun_toggled)
         rightLayoutTopButtons.addWidget(self.autoRunCheckBox)
-        rightLayout.addLayout(rightLayoutTopButtons)
+        rightTopLayout.addLayout(rightLayoutTopButtons)
 
         rightLayoutSlotButtons = QHBoxLayout()
         self.scriptSlots = []
@@ -131,17 +142,21 @@ class WorkbenchTab(QWidget):
             self.scriptSlots.append(button)
 
             rightLayoutSlotButtons.addWidget(button)
-        rightLayout.addLayout(rightLayoutSlotButtons)
+        rightTopLayout.addLayout(rightLayoutSlotButtons)
 
-        rightLayout.addWidget(self.scriptEdit)
-        rightLayout.addWidget(self.executeButton)
-        rightLayout.addWidget(self.outputEdit)
-        rightContainer.setLayout(rightLayout)
+        rightTopLayout.addWidget(self.scriptEdit)
+        rightTopLayout.addWidget(self.executeButton)
+        rightTopContainer.setLayout(rightTopLayout)
+
+        rightBottomLayout.addWidget(self.outputEdit)
+        rightBottomContainer.setLayout(rightBottomLayout)
 
         # Add containers to splitter and set the main widget
         splitter.addWidget(leftContainer)
-        splitter.addWidget(rightContainer)
-        splitter.setSizes([650, 550])
+        splitter.addWidget(rightContainerSplitter)
+
+        splitter.setStretchFactor(0, 50)
+        splitter.setStretchFactor(1, 50)
 
         # Set the main layout
         mainWidget = QWidget()
