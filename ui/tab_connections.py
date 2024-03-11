@@ -1,24 +1,16 @@
-import base64
-import copy
-import functools
+import json
 import json
 import sys
 import time
 from pprint import pformat
 
 from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QKeySequence
 from PyQt5.QtGui import QTextOption
-from PyQt5.QtWidgets import QPushButton, QVBoxLayout, QWidget, QTextEdit, QSplitter, \
-    QHBoxLayout, QCheckBox, QLabel, QShortcut, QListWidget, QListWidgetItem, QTableWidget, QTableWidgetItem
+from PyQt5.QtWidgets import QVBoxLayout, QWidget, QTextEdit, QSplitter, \
+    QHBoxLayout, QTableWidget, QTableWidgetItem
 
 from util.fonts import load_font_prog
-from util.err import error_pyperclip
 from util.util import session_tuple
-from util.util import capture_stdout_as_string, print_bytes
-from ui.static_text import S
-from .checkbutton import CheckButton
-from .common import create_python_editor
 
 try:
     from PyQt5.Qsci import QsciScintilla, QsciLexerPython
@@ -28,9 +20,7 @@ except ImportError:
     print("Ubuntu: apt-get install python3-pyqt5.qsci python3-pyperclip")
     sys.exit(1)
 
-import ws.server
-from .state import State, Global
-from .config import Config
+from .state import State
 
 import logging
 
@@ -110,6 +100,18 @@ class ConnectionTab(QWidget):
         for i in sorted(rows, reverse=True):
             self.connection_list.removeRow(i)
 
+    def custom_resize_columns(self):
+        for column in range(self.connection_list.columnCount()):
+            width = self.connection_list.columnWidth(column)
+            max_width = 0
+            for row in range(self.connection_list.rowCount()):
+                item = self.connection_list.item(row, column)
+                if item:
+                    new_width = self.connection_list.fontMetrics().width(item.text()) + 10  # adding padding for visibility
+                    max_width = new_width if new_width > max_width else max_width
+            if max_width > width:
+                self.connection_list.setColumnWidth(column, max_width)
+
     def make_row_uneditable(self, row):
         for col in range(ConnectionTab.cfg.conn_headers_len):
             item = self.connection_list.item(row, col)
@@ -148,7 +150,7 @@ class ConnectionTab(QWidget):
 
         self.make_row_uneditable(0)
         self.remove_stales()
-        self.connection_list.resizeColumnsToContents()
+        self.custom_resize_columns()
         self.connection_list.resizeRowToContents(0)
 
     def remove_stales(self):
@@ -193,7 +195,7 @@ class ConnectionTab(QWidget):
                 item.setData(Qt.UserRole, data)
 
         self.remove_stales()
-        self.connection_list.resizeColumnsToContents()
+        self.custom_resize_columns()
 
     def on_session_info(self, id: str, label: str, js: str):
         for i in range(0, self.connection_list.rowCount()):
@@ -213,5 +215,6 @@ class ConnectionTab(QWidget):
                 item.setData(Qt.UserRole, data)
 
         self.remove_stales()
-        self.connection_list.resizeColumnsToContents()
+        self.custom_resize_columns()
+
 
