@@ -8,6 +8,10 @@ class CheckButton(QPushButton):
         self.clicked.connect(self.update_status)
         self.update_status()
 
+    def setChecked(self, state):
+        super().setChecked(state)
+        self.update_status()
+
     def update_status(self):
         if self.isChecked():
             self.setStyleSheet(

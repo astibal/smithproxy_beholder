@@ -13,6 +13,7 @@ from util.fonts import load_font_prog
 from util.err import error_pyperclip
 from util.util import capture_stdout_as_string, print_bytes
 from ui.static_text import S
+from .checkbutton import CheckButton
 from .common import create_python_editor
 
 try:
@@ -133,12 +134,6 @@ class ContentWidget(QWidget):
 
         self.scriptEdit = create_python_editor()
 
-        sc1 = Config.load_content_script(1)
-        if not sc1: sc1 = S.py_default_script
-        self.scriptEdit.setText(sc1)
-
-        self.scriptEdit.textChanged.connect(self.on_script_changed)
-
         self.executeButton = QPushButton('Execute &Script')
         self.executeButton.clicked.connect(self.execute_script)
         sc_exe_script = QShortcut(QKeySequence(Qt.CTRL + Qt.Key_S), self)
@@ -159,8 +154,11 @@ class ContentWidget(QWidget):
 
         rightLayoutSlotButtons = QHBoxLayout()
         self.scriptSlots = []
+        self.buttons = {} # slot_nr -> CheckButton
+
         for i in range(1, 6):
-            button = QPushButton(f"#{i}")
+            button = CheckButton(f"#{i}")
+            self.buttons[i] = button
             shortcut = QShortcut(QKeySequence(Qt.CTRL + Qt.Key_0 + i), self)
 
             button.clicked.connect(functools.partial(
@@ -171,6 +169,8 @@ class ContentWidget(QWidget):
 
             rightLayoutSlotButtons.addWidget(button)
         rightTopLayout.addLayout(rightLayoutSlotButtons)
+
+        self.on_script_slot_button(1)
 
         rightTopLayout.addWidget(self.scriptEdit)
         rightTopLayout.addWidget(self.executeButton)
@@ -367,7 +367,14 @@ class ContentWidget(QWidget):
     def on_script_slot_button(self, number):
         # number - it's not index, it starts with 1
         with State.lock:
-            State.ui.content_tab.current_script_slot = number
+            # change buttons state only when clicking to non-active button
+            if State.ui.content_tab.current_script_slot != number:
+                State.ui.content_tab.current_script_slot = number
+                for sl_id in self.buttons.keys():
+                    if sl_id != number:
+                        self.buttons[sl_id].setChecked(False)
+            else:
+                self.buttons[number].setChecked(True)
 
         script_text = Config.load_content_script(number)
         if not script_text:
