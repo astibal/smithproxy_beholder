@@ -1,4 +1,5 @@
 import logging
+import os
 
 from PyQt5.QtWidgets import QMainWindow, QTabWidget, QAction, QFileDialog, QMessageBox
 
@@ -17,7 +18,7 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
 
-        self.setWindowTitle('Smithproxy WebHook Application')
+        self.setWindowTitle(MainWindow.make_title_str())
         self.setGeometry(100, 100, 1200, 800)
 
 
@@ -60,9 +61,13 @@ class MainWindow(QMainWindow):
 
         self.setCentralWidget(self.tab_widget)
 
+    @staticmethod
+    def make_title_str():
+        return f'Smithproxy WebHook Application - {Config.config["project_path"]}'
 
     def open_project_dir(self):
-        directory = QFileDialog.getExistingDirectory(None, "Select Directory")
+        parent_dir = os.path.dirname(Config.config['project_path'])
+        directory = QFileDialog.getExistingDirectory(None, "Select Directory", directory=parent_dir)
 
         # do not continue if Cancelled
         if not directory:
@@ -74,6 +79,7 @@ class MainWindow(QMainWindow):
         Config.save_config()
 
         self.content_widget.on_script_slot_button(1)
+        self.setWindowTitle(MainWindow.make_title_str())
 
     def help_content(self):
         self.help_viewer = MarkdownViewer()
