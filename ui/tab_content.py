@@ -133,6 +133,7 @@ class ContentWidget(QWidget):
         rightBottomLayout = QVBoxLayout()
 
         self.scriptEdit = create_python_editor()
+        self.scriptEdit.textChanged.connect(self.on_script_changed)
 
         self.executeButton = QPushButton('Execute &Script')
         self.executeButton.clicked.connect(self.execute_script)
