@@ -26,10 +26,10 @@ import logging
 
 log = logging.getLogger()
 
-class ConnectionTab(QWidget):
 
+class ConnectionsTableWidget(QTableWidget):
     class cfg:
-        conn_headers = ["Source", "Src Port", "Destination", "Dst Port", "State" ]
+        conn_headers = ["Source", "Src Port", "Destination", "Dst Port", "State"]
         conn_headers_Source = 0
         conn_headers_Src_Port = 1
         conn_headers_Dst = 2
@@ -40,6 +40,173 @@ class ConnectionTab(QWidget):
         TimeoutSec = 30
         color_expiring = "#f0f0f0"
 
+    def __init__(self, rows: int, parent=None):
+        super().__init__(rows, ConnectionsTableWidget.cfg.conn_headers_len, parent)
+
+        self.setHorizontalHeaderLabels(ConnectionsTableWidget.cfg.conn_headers)
+        self.verticalHeader().setVisible(False)
+
+        self.cellClicked.connect(self.on_cell_clicked)
+        self.cellActivated.connect(self.on_cell_clicked)
+        self.currentCellChanged.connect(self.on_cell_clicked)
+        State.events.click_1s.connect(self.rescan_connections)
+
+        self.connection_details = None
+        self.rescan = False
+
+        self.table_font = load_font_prog()
+        self.table_font.setPointSize(self.table_font.pointSize() - 1)
+
+    def set_details_widget(self, connection_details: QTextEdit):
+        self.connection_details = connection_details
+
+    def set_rescan(self, rescan: bool):
+        self.rescan = rescan
+
+    def on_cell_clicked(self, row, col):
+        data_item = self.item(row, 0)
+        if data_item is not None:
+            metadata = data_item.data(Qt.UserRole)
+            if metadata is not None and self.connection_details:
+                self.connection_details.setText(pformat(metadata, indent=2, sort_dicts=True, compact=True))
+
+    def delete_rows(self, rows: [int]):
+        for i in sorted(rows, reverse=True):
+            self.removeRow(i)
+
+    def custom_resize_columns(self):
+        for column in range(self.columnCount()):
+            width = self.columnWidth(column)
+            max_width = 0
+            for row in range(self.rowCount()):
+                item = self.item(row, column)
+                if item:
+                    new_width = self.fontMetrics().width(
+                        item.text()) + 20  # adding padding for visibility
+                    max_width = new_width if new_width > max_width else max_width
+            if max_width > width:
+                self.setColumnWidth(column, max_width)
+
+    def make_row_uneditable(self, row):
+        for col in range(ConnectionsTableWidget.cfg.conn_headers_len):
+            item = self.item(row, col)
+            if item is not None:
+                item.setFlags(item.flags() & ~Qt.ItemIsEditable)
+
+    def remove_stales(self):
+        to_rem = []
+
+        for i in range(0, self.rowCount()):
+            item = self.item(i, 0)
+            if item:
+                data_1 = item.data(Qt.UserRole + 1)
+                if data_1 is not None:
+                    if time.time() > data_1['delete_ts']:
+                        to_rem.append(i)
+                    elif data_1['delete_ts'] - time.time() < self.cfg.TimeoutSec / 3:
+                        status_item = self.item(i, self.cfg.conn_headers_State)
+                        if status_item:
+                            status_item.setBackground(QColor(self.cfg.color_expiring))
+                else:
+                    status_item = self.item(i, self.cfg.conn_headers_State)
+                    if status_item.text() in ["CLOSED", ]:
+                        data_1 = {
+                            "delete_ts": time.time() + self.cfg.TimeoutSec
+                        }
+                        item.setData(Qt.UserRole + 1, data_1)
+
+        if len(to_rem) > 0:
+            self.delete_rows(to_rem)
+
+    def rescan_connections(self):
+        if self.rescan:
+            self.remove_stales()
+            self.custom_resize_columns()
+
+
+    def add_connection(self, id: str, label: str, js: str):
+        rows = self.rowCount()
+        self.insertRow(0)
+
+        metadata = {
+            "id": id,
+            "label": label,
+            "start": {
+                "ts": time.time(),
+                "js": json.loads(js)
+            }
+        }
+
+        tup = session_tuple(label)
+        tup = tup if tup is not None else []
+
+        items = []
+        for i in range(ConnectionsTableWidget.cfg.conn_headers_len):
+            title = ""
+            if i < len(tup):
+                title = tup[i]
+
+            item = QTableWidgetItem(title)
+            item.setData(Qt.UserRole, metadata)
+            item.setFont(self.table_font)
+            items.append(item)
+
+        for i in range(len(items)):
+            self.setItem(0, i, items[i])
+
+        self.make_row_uneditable(0)
+        self.remove_stales()
+        self.custom_resize_columns()
+        self.resizeRowToContents(0)
+
+
+
+    def stop_connection(self, id: str, label: str, js: str):
+        log.info(f'session stop for {label}')
+
+        for i in range(0, self.rowCount()):
+            item = self.item(i, 0)
+            if not item:
+                continue
+
+            data = item.data(Qt.UserRole)
+
+            if data is not None and data['id'] == id:
+                stop = {
+                    "ts": time.time(),
+                    "js": json.loads(js)
+                }
+
+                state_item = self.item(i, ConnectionsTableWidget.cfg.conn_headers_State)
+                state_item.setText(f'CLOSED')
+                data['stop'] = stop
+                item.setData(Qt.UserRole, data)
+
+        self.remove_stales()
+        self.custom_resize_columns()
+
+    def add_connection_info(self, id: str, label: str, js: str):
+        for i in range(0, self.rowCount()):
+            item = self.item(i, 0)
+            data = item.data(Qt.UserRole)
+
+            if data is not None and data['id'] == id:
+                info = {
+                    "ts": time.time(),
+                    "js": json.loads(js)
+                }
+
+                if 'info' not in data.keys():
+                    data['info'] = []
+                data['info'].append(info)
+
+                item.setData(Qt.UserRole, data)
+
+        self.remove_stales()
+        self.custom_resize_columns()
+
+
+class ConnectionTab(QWidget):
 
     def __init__(self):
         super().__init__()
@@ -48,7 +215,6 @@ class ConnectionTab(QWidget):
         State.events.received_session_start.connect(self.on_session_start)
         State.events.received_session_stop.connect(self.on_session_stop)
         State.events.received_session_info.connect(self.on_session_info)
-        State.events.click_1s.connect(self.rescan_connections)
 
     def initUI(self):
         mainLayout = QHBoxLayout()
@@ -67,24 +233,16 @@ class ConnectionTab(QWidget):
         splitter.addWidget(rightContainer)
         mainLayout.addWidget(splitter)
 
-        self.connection_list = QTableWidget(0, ConnectionTab.cfg.conn_headers_len)
-        self.connection_list.setHorizontalHeaderLabels(ConnectionTab.cfg.conn_headers)
-        self.connection_list.verticalHeader().setVisible(False)
+        self.conn_live_table = ConnectionsTableWidget(0)
+        self.conn_live_table.set_rescan(True)
 
-        self.table_font = load_font_prog()
-        self.table_font.setPointSize(self.table_font.pointSize() - 1)
-
-        leftLayout.addWidget(self.connection_list)
+        leftLayout.addWidget(self.conn_live_table)
 
         self.connection_details = QTextEdit()
+        self.conn_live_table.set_details_widget(self.connection_details)
         self.connection_details.setReadOnly(True)
         self.connection_details.setWordWrapMode(QTextOption.NoWrap)
         self.connection_details.setFont(load_font_prog())
-
-
-        self.connection_list.cellClicked.connect(self.on_cell_clicked)
-        self.connection_list.cellActivated.connect(self.on_cell_clicked)
-        self.connection_list.currentCellChanged.connect(self.on_cell_clicked)
 
         self.tab_widget = QTabWidget()
         self.tab_widget.setTabPosition(QTabWidget.North)
@@ -92,7 +250,7 @@ class ConnectionTab(QWidget):
         live_widget = QWidget()
         live_layout = QVBoxLayout()
         live_widget.setLayout(live_layout)
-        live_layout.addWidget(self.connection_list)
+        live_layout.addWidget(self.conn_live_table)
         self.tab_widget.addTab(live_widget, "Live")
 
         leftLayout.addWidget(self.tab_widget)
@@ -100,141 +258,12 @@ class ConnectionTab(QWidget):
 
         self.setLayout(mainLayout)
 
-
-    def on_cell_clicked(self, row, col):
-        data_item = self.connection_list.item(row, 0)
-        if data_item is not None:
-            metadata = data_item.data(Qt.UserRole)
-            if metadata is not None:
-                self.connection_details.setText(pformat(metadata, indent=2, sort_dicts=True, compact=True))
-
-    def delete_rows(self, rows: [int]):
-        for i in sorted(rows, reverse=True):
-            self.connection_list.removeRow(i)
-
-    def custom_resize_columns(self):
-        for column in range(self.connection_list.columnCount()):
-            width = self.connection_list.columnWidth(column)
-            max_width = 0
-            for row in range(self.connection_list.rowCount()):
-                item = self.connection_list.item(row, column)
-                if item:
-                    new_width = self.connection_list.fontMetrics().width(item.text()) + 10  # adding padding for visibility
-                    max_width = new_width if new_width > max_width else max_width
-            if max_width > width:
-                self.connection_list.setColumnWidth(column, max_width)
-
-    def make_row_uneditable(self, row):
-        for col in range(ConnectionTab.cfg.conn_headers_len):
-            item = self.connection_list.item(row, col)
-            if item is not None:
-                item.setFlags(item.flags() & ~Qt.ItemIsEditable)
-
     def on_session_start(self, id: str, label: str, js: str):
-        rows = self.connection_list.rowCount()
-        self.connection_list.insertRow(0)
-
-        metadata = {
-            "id": id,
-            "label": label,
-            "start":  {
-                "ts": time.time(),
-                "js": json.loads(js)
-            }
-        }
-
-        tup = session_tuple(label)
-        tup = tup if tup is not None else []
-
-        items = []
-        for i in range(ConnectionTab.cfg.conn_headers_len):
-            title = ""
-            if i < len(tup):
-                title = tup[i]
-
-            item = QTableWidgetItem(title)
-            item.setData(Qt.UserRole, metadata)
-            item.setFont(self.table_font)
-            items.append(item)
-
-        for i in range(len(items)):
-            self.connection_list.setItem(0, i, items[i])
-
-        self.make_row_uneditable(0)
-        self.remove_stales()
-        self.custom_resize_columns()
-        self.connection_list.resizeRowToContents(0)
-
-    def remove_stales(self):
-        to_rem = []
-
-        for i in range(0, self.connection_list.rowCount()):
-            item = self.connection_list.item(i, 0)
-            if item:
-                data_1 = item.data(Qt.UserRole + 1)
-                if data_1 is not None:
-                    if time.time() > data_1['delete_ts']:
-                        to_rem.append(i)
-                    elif data_1['delete_ts'] - time.time() < ConnectionTab.cfg.TimeoutSec / 3:
-                        status_item = self.connection_list.item(i, ConnectionTab.cfg.conn_headers_State)
-                        if status_item:
-                            status_item.setBackground(QColor(ConnectionTab.cfg.color_expiring))
-                else:
-                    status_item = self.connection_list.item(i, ConnectionTab.cfg.conn_headers_State)
-                    if status_item.text() in ["CLOSED", ]:
-                        data_1 = {
-                            "delete_ts": time.time() + ConnectionTab.cfg.TimeoutSec
-                        }
-                        item.setData(Qt.UserRole + 1, data_1)
-
-        if len(to_rem) > 0:
-            self.delete_rows(to_rem)
+        self.conn_live_table.add_connection(id, label, js)
 
     def on_session_stop(self, id: str, label: str, js: str):
-        log.info(f'session stop for {label}')
-
-        for i in range(0, self.connection_list.rowCount()):
-            item = self.connection_list.item(i, 0)
-            if not item:
-                continue
-
-            data = item.data(Qt.UserRole)
-
-            if data is not None and data['id'] == id:
-
-                stop = {
-                    "ts": time.time(),
-                    "js": json.loads(js)
-                }
-
-                state_item = self.connection_list.item(i, ConnectionTab.cfg.conn_headers_State)
-                state_item.setText(f'CLOSED')
-                data['stop'] = stop
-                item.setData(Qt.UserRole, data)
-
-        self.remove_stales()
-        self.custom_resize_columns()
+        self.conn_live_table.stop_connection(id, label, js)
 
     def on_session_info(self, id: str, label: str, js: str):
-        for i in range(0, self.connection_list.rowCount()):
-            item = self.connection_list.item(i, 0)
-            data = item.data(Qt.UserRole)
+        self.conn_live_table.add_connection_info(id, label, js)
 
-            if data is not None and data['id'] == id:
-                info = {
-                    "ts": time.time(),
-                    "js": json.loads(js)
-                }
-
-                if 'info' not in data.keys():
-                    data['info'] = []
-                data['info'].append(info)
-
-                item.setData(Qt.UserRole, data)
-
-        self.remove_stales()
-        self.custom_resize_columns()
-
-    def rescan_connections(self):
-        self.remove_stales()
-        self.custom_resize_columns()
