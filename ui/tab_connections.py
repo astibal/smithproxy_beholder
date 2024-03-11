@@ -7,7 +7,7 @@ from pprint import pformat
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QTextOption, QColor
 from PyQt5.QtWidgets import QVBoxLayout, QWidget, QTextEdit, QSplitter, \
-    QHBoxLayout, QTableWidget, QTableWidgetItem
+    QHBoxLayout, QTableWidget, QTableWidgetItem, QTabWidget
 
 from util.fonts import load_font_prog
 from util.util import session_tuple
@@ -86,6 +86,16 @@ class ConnectionTab(QWidget):
         self.connection_list.cellActivated.connect(self.on_cell_clicked)
         self.connection_list.currentCellChanged.connect(self.on_cell_clicked)
 
+        self.tab_widget = QTabWidget()
+        self.tab_widget.setTabPosition(QTabWidget.North)
+
+        live_widget = QWidget()
+        live_layout = QVBoxLayout()
+        live_widget.setLayout(live_layout)
+        live_layout.addWidget(self.connection_list)
+        self.tab_widget.addTab(live_widget, "Live")
+
+        leftLayout.addWidget(self.tab_widget)
         rightLayout.addWidget(self.connection_details)
 
         self.setLayout(mainLayout)
