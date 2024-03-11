@@ -78,6 +78,10 @@ class ConnectionTab(QWidget):
         self.connection_list = QTableWidget(0, ConnectionTab.cfg.conn_headers_len)
         self.connection_list.setHorizontalHeaderLabels(ConnectionTab.cfg.conn_headers)
         self.connection_list.verticalHeader().setVisible(False)
+
+        self.table_font = load_font_prog()
+        self.table_font.setPointSize(self.table_font.pointSize() - 1)
+
         leftLayout.addWidget(self.connection_list)
 
         self.connection_details = QTextEdit()
@@ -114,7 +118,7 @@ class ConnectionTab(QWidget):
 
     def on_session_start(self, id: str, label: str, js: str):
         rows = self.connection_list.rowCount()
-        self.connection_list.setRowCount(rows + 1)
+        self.connection_list.insertRow(0)
 
         metadata = {
             "id": id,
@@ -136,30 +140,32 @@ class ConnectionTab(QWidget):
 
             item = QTableWidgetItem(title)
             item.setData(Qt.UserRole, metadata)
+            item.setFont(self.table_font)
             items.append(item)
 
         for i in range(len(items)):
-            self.connection_list.setItem(rows, i, items[i])
+            self.connection_list.setItem(0, i, items[i])
 
-        self.make_row_uneditable(rows)
+        self.make_row_uneditable(0)
         self.remove_stales()
         self.connection_list.resizeColumnsToContents()
-        self.connection_list.resizeRowToContents(rows)
+        self.connection_list.resizeRowToContents(0)
 
     def remove_stales(self):
         to_rem = []
 
         for i in range(0, self.connection_list.rowCount()):
             item = self.connection_list.item(i, 0)
-            data_1 = item.data(Qt.UserRole + 1)
-            if data_1 is not None:
-                if time.time() > data_1['delete_ts']:
-                    to_rem.append(i)
-            else:
-                data_1 = {
-                    "delete_ts": time.time() + ConnectionTab.cfg.TimeoutSec
-                }
-                item.setData(Qt.UserRole + 1, data_1)
+            if item:
+                data_1 = item.data(Qt.UserRole + 1)
+                if data_1 is not None:
+                    if time.time() > data_1['delete_ts']:
+                        to_rem.append(i)
+                else:
+                    data_1 = {
+                        "delete_ts": time.time() + ConnectionTab.cfg.TimeoutSec
+                    }
+                    item.setData(Qt.UserRole + 1, data_1)
 
         if len(to_rem) > 0:
             self.delete_rows(to_rem)
@@ -169,6 +175,9 @@ class ConnectionTab(QWidget):
 
         for i in range(0, self.connection_list.rowCount()):
             item = self.connection_list.item(i, 0)
+            if not item:
+                continue
+
             data = item.data(Qt.UserRole)
 
             if data is not None and data['id'] == id:
