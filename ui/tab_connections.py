@@ -5,7 +5,7 @@ import time
 from pprint import pformat
 
 from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QTextOption
+from PyQt5.QtGui import QTextOption, QColor
 from PyQt5.QtWidgets import QVBoxLayout, QWidget, QTextEdit, QSplitter, \
     QHBoxLayout, QTableWidget, QTableWidgetItem
 
@@ -38,6 +38,7 @@ class ConnectionTab(QWidget):
 
         conn_headers_len = len(conn_headers)
         TimeoutSec = 30
+        color_expiring = "#f0f0f0"
 
 
     def __init__(self):
@@ -163,11 +164,17 @@ class ConnectionTab(QWidget):
                 if data_1 is not None:
                     if time.time() > data_1['delete_ts']:
                         to_rem.append(i)
+                    elif data_1['delete_ts'] - time.time() < ConnectionTab.cfg.TimeoutSec / 3:
+                        status_item = self.connection_list.item(i, ConnectionTab.cfg.conn_headers_State)
+                        if status_item:
+                            status_item.setBackground(QColor(ConnectionTab.cfg.color_expiring))
                 else:
-                    data_1 = {
-                        "delete_ts": time.time() + ConnectionTab.cfg.TimeoutSec
-                    }
-                    item.setData(Qt.UserRole + 1, data_1)
+                    status_item = self.connection_list.item(i, ConnectionTab.cfg.conn_headers_State)
+                    if status_item.text() in ["CLOSED", ]:
+                        data_1 = {
+                            "delete_ts": time.time() + ConnectionTab.cfg.TimeoutSec
+                        }
+                        item.setData(Qt.UserRole + 1, data_1)
 
         if len(to_rem) > 0:
             self.delete_rows(to_rem)
