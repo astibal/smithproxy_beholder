@@ -4,7 +4,7 @@ import sys
 import time
 from pprint import pformat
 
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, pyqtSignal
 from PyQt5.QtGui import QTextOption, QColor
 from PyQt5.QtWidgets import QVBoxLayout, QWidget, QTextEdit, QSplitter, \
     QHBoxLayout, QTableWidget, QTableWidgetItem, QTabWidget
@@ -28,6 +28,8 @@ log = logging.getLogger()
 
 
 class ConnectionsTableWidget(QTableWidget):
+
+    removing_row = pyqtSignal(int)
     class cfg:
         conn_headers = ["Source", "Src Port", "Destination", "Dst Port", "State"]
         conn_headers_Source = 0
@@ -72,6 +74,7 @@ class ConnectionsTableWidget(QTableWidget):
 
     def delete_rows(self, rows: [int]):
         for i in sorted(rows, reverse=True):
+            self.removing_row.emit(i)
             self.removeRow(i)
 
     def custom_resize_columns(self):
@@ -235,11 +238,14 @@ class ConnectionTab(QWidget):
 
         self.conn_live_table = ConnectionsTableWidget(0)
         self.conn_live_table.set_rescan(True)
+        self.conn_attic_table = ConnectionsTableWidget(0)
+        self.conn_live_table.set_rescan(False)
 
         leftLayout.addWidget(self.conn_live_table)
 
         self.connection_details = QTextEdit()
         self.conn_live_table.set_details_widget(self.connection_details)
+        self.conn_attic_table.set_details_widget(self.connection_details)
         self.connection_details.setReadOnly(True)
         self.connection_details.setWordWrapMode(QTextOption.NoWrap)
         self.connection_details.setFont(load_font_prog())
@@ -253,10 +259,18 @@ class ConnectionTab(QWidget):
         live_layout.addWidget(self.conn_live_table)
         self.tab_widget.addTab(live_widget, "Live")
 
+        attic_widget = QWidget()
+        attic_layout = QVBoxLayout()
+        attic_widget.setLayout(attic_layout)
+        attic_layout.addWidget(self.conn_attic_table)
+        self.tab_widget.addTab(attic_widget, "Attic")
+
         leftLayout.addWidget(self.tab_widget)
         rightLayout.addWidget(self.connection_details)
 
         self.setLayout(mainLayout)
+
+        self.conn_live_table.removing_row.connect(self.on_live_connection_delete)
 
     def on_session_start(self, id: str, label: str, js: str):
         self.conn_live_table.add_connection(id, label, js)
@@ -266,4 +280,22 @@ class ConnectionTab(QWidget):
 
     def on_session_info(self, id: str, label: str, js: str):
         self.conn_live_table.add_connection_info(id, label, js)
+
+    def on_live_connection_delete(self, row: int):
+
+        self.conn_attic_table.insertRow(0)
+
+        for col in range(self.conn_live_table.cfg.conn_headers_len):
+            item = self.conn_live_table.item(row, col)
+
+            new_item = QTableWidgetItem(item.text())
+            new_item.setFont(self.conn_attic_table.table_font)
+            new_item.setData(Qt.UserRole, item.data(Qt.UserRole))
+            new_item.setData(Qt.UserRole + 1, item.data(Qt.UserRole))
+
+            self.conn_attic_table.setItem(0, col, new_item)
+
+        self.conn_attic_table.make_row_uneditable(0)
+        self.conn_attic_table.resizeRowToContents(0)
+        self.conn_attic_table.custom_resize_columns()
 
