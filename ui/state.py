@@ -44,6 +44,7 @@ class State:
             current_script_slot: int = 1
 
         class workbench_tab:
+            current_script_slot: int = 1
             autorun: bool = False
             current_sample = None
             current_sample_key = 1

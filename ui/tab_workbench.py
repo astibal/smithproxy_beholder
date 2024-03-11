@@ -169,7 +169,7 @@ class WorkbenchTab(QWidget):
     def on_script_changed(self):
         self.autoRunCheckBox.setCheckState(Qt.Unchecked)
         with State.lock:
-            curslot = State.ui.content_tab.current_script_slot
+            curslot = State.ui.workbench_tab.current_script_slot
 
         Config.save_content_script(curslot, self.scriptEdit.text())
 
@@ -269,8 +269,8 @@ class WorkbenchTab(QWidget):
         # number - it's not index, it starts with 1
         with State.lock:
             # change buttons state only when clicking to non-active button
-            if State.ui.content_tab.current_script_slot != number:
-                State.ui.content_tab.current_script_slot = number
+            if State.ui.workbench_tab.current_script_slot != number:
+                State.ui.workbench_tab.current_script_slot = number
                 for sl_id in self.buttons.keys():
                     if sl_id != number:
                         self.buttons[sl_id].setChecked(False)
