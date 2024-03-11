@@ -23,6 +23,8 @@ class State:
         received_session_stop = QtCore.pyqtSignal(str, str, str)
         received_session_info = QtCore.pyqtSignal(str, str, str)
 
+        click_1s = QtCore.pyqtSignal()
+
     events = StateEvents()
 
     class ui:

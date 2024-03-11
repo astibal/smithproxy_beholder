@@ -48,6 +48,7 @@ class ConnectionTab(QWidget):
         State.events.received_session_start.connect(self.on_session_start)
         State.events.received_session_stop.connect(self.on_session_stop)
         State.events.received_session_info.connect(self.on_session_info)
+        State.events.click_1s.connect(self.rescan_connections)
 
     def initUI(self):
         mainLayout = QHBoxLayout()
@@ -224,4 +225,6 @@ class ConnectionTab(QWidget):
         self.remove_stales()
         self.custom_resize_columns()
 
-
+    def rescan_connections(self):
+        self.remove_stales()
+        self.custom_resize_columns()
