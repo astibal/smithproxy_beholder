@@ -19,8 +19,9 @@ class State:
     class StateEvents(QtCore.QObject):
         # Shared event for button click signaling
         button_process = threading.Event()
-        received_session_start = QtCore.pyqtSignal(str, str)
-        received_session_stop = QtCore.pyqtSignal(str, str)
+        received_session_start = QtCore.pyqtSignal(str, str, str)
+        received_session_stop = QtCore.pyqtSignal(str, str, str)
+        received_session_info = QtCore.pyqtSignal(str, str, str)
 
     events = StateEvents()
 

@@ -234,10 +234,10 @@ class ContentWidget(QWidget):
             with State.lock:
                 State.ui.content_tab.autorun = False
 
-    def on_session_start(self, id: str, label: str):
+    def on_session_start(self, id: str, label: str, js: str):
         log.debug(f"on_session_start: new session: {id}:{label}")
 
-    def on_session_stop(self, id: str, label: str):
+    def on_session_stop(self, id: str, label: str, js: str):
         log.debug(f"on_session_stop: closed session: {id}:{label}")
         with State.lock:
             died = State.ui.content_tab.session_id == id

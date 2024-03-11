@@ -1,5 +1,16 @@
 import sys
+import re
 from contextlib import contextmanager
+
+def session_tuple(value: str):
+    pattern = r"(?:.*_)?([\d.:a-fA-F]+):(\d+)"
+    pattern = pattern + r"\+" + pattern
+    match = re.search(pattern, value)
+
+    if match:
+        return match.groups()
+    else:
+        return None
 
 def print_bytes(input_bytes):
     ret = ""

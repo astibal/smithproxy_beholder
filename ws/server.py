@@ -1,4 +1,5 @@
 import base64
+import json
 import logging
 import ssl
 from pprint import pformat
@@ -66,6 +67,9 @@ class FlaskThread(QThread):
 
                 elif payload["action"] == "connection-stop":
                     return self.process_connection_stop(payload)
+
+                elif payload["action"] == "connection-info":
+                    return self.process_connection_info(payload)
 
                 elif payload["action"] == "ping":
                     return self.process_ping(payload)
@@ -148,7 +152,6 @@ class FlaskThread(QThread):
         session_label = payload["details"]["info"]["session"]
         log.info(f"::: action - connection start - {session_label}")
 
-        session_label = payload["details"]["info"]["session"]
         session_id = payload["id"]
 
         with State.lock:
@@ -157,7 +160,7 @@ class FlaskThread(QThread):
             log.debug(str(State.sessions.sessions.forward))
             log.debug(str(State.sessions.sessions.inverse))
 
-        State.events.received_session_start.emit(session_id, session_label)
+        State.events.received_session_start.emit(session_id, session_label, json.dumps(payload))
 
         return jsonify({}), 200
 
@@ -165,7 +168,6 @@ class FlaskThread(QThread):
         session_label = payload["details"]["info"]["session"]
         log.info(f"::: action - connection stop - {session_label}")
 
-        session_label = payload["details"]["info"]["session"]
         session_id = payload["id"]
         with State.lock:
             State.sessions.sessions.remove(session_id)
@@ -173,7 +175,20 @@ class FlaskThread(QThread):
             log.debug(str(State.sessions.sessions.forward))
             log.debug(str(State.sessions.sessions.inverse))
 
-        State.events.received_session_stop.emit(session_id, session_label)
+        State.events.received_session_stop.emit(session_id, session_label, json.dumps(payload))
+
+        return jsonify({}), 200
+
+    def process_connection_info(self, payload):
+        session_id = payload["id"]
+        log.info(f"::: action - connection info - {session_id}")
+
+        with State.lock:
+            log.debug("session map:")
+            log.debug(str(State.sessions.sessions.forward))
+            log.debug(str(State.sessions.sessions.inverse))
+
+        State.events.received_session_info.emit(session_id, None, json.dumps(payload))
 
         return jsonify({}), 200
 
