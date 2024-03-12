@@ -1,7 +1,9 @@
 import logging
 import sys
+import threading
+import time
 
-from PyQt5.QtCore import QObject, pyqtSignal, QTimer
+from PyQt5.QtCore import QObject, pyqtSignal, QTimer, QThread
 from PyQt5.QtWidgets import QApplication
 
 from ui.config import Config
@@ -13,17 +15,28 @@ log = logging.getLogger()
 log.propagate = False
 
 class Timer(QObject):
-    def start(self):
-        self.timer = QTimer()
-        self.timer.timeout.connect(self.emit_signal)
-        self.timer.start(1000)
+    enabled = True
+    def run(self):
+        while Timer.enabled:
+            time.sleep(1)
+            Timer.emit_signal()
 
-    def emit_signal(self):
+    def start(self):
+        threading.Thread(target=self.run).start()
+
+    @staticmethod
+    def emit_signal():
         State.events.click_1s.emit()
+
+    @staticmethod
+    def stop_it():
+        Timer.enabled = False
+
 
 if __name__ == "__main__":
     # Initialize and run the PyQt application
     qt_app = QApplication(sys.argv)
+    qt_app.aboutToQuit.connect(Timer.stop_it)
 
     Config.load_config()
     mainWindow = MainWindow()
