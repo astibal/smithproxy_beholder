@@ -22,7 +22,7 @@ class State:
         received_session_start = QtCore.pyqtSignal(str, str, str)
         received_session_stop = QtCore.pyqtSignal(str, str, str)
         received_session_info = QtCore.pyqtSignal(str, str, str)
-
+        received_ping = QtCore.pyqtSignal()
         click_1s = QtCore.pyqtSignal()
 
     events = StateEvents()
@@ -30,7 +30,7 @@ class State:
     class ui:
         # should we just ignore everything and let webhooks flow with default answers
         skip_click: bool = True
-        #
+        request_ping_plus = True
 
         class content_tab:
             autorun: bool = False

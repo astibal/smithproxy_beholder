@@ -1,5 +1,7 @@
+import copy
 import json
 import json
+import pprint
 import sys
 import time
 from pprint import pformat
@@ -112,20 +114,57 @@ class ConnectionsTableWidget(QTableWidget):
                             status_item.setBackground(QColor(self.cfg.color_expiring))
                 else:
                     status_item = self.item(i, self.cfg.conn_headers_State)
-                    if status_item.text() in ["CLOSED", ]:
+                    if status_item.text() in ["CLOSED", "WIPED"]:
                         data_1 = {
                             "delete_ts": time.time() + self.cfg.TimeoutSec
                         }
                         item.setData(Qt.UserRole + 1, data_1)
+                    else:
+                        # find session in session table
+                        data = item.data(Qt.UserRole)
+                        id = data.get("id", None)
+                        with (State.lock):
+                            if id and State.sessions.sessions.size() > 0 \
+                                    and State.sessions.sessions.forward.get(id) is None:
+                                status_item.setText("WIPED")
+
 
         if len(to_rem) > 0:
             self.delete_rows(to_rem)
 
+    def add_already_existing(self):
+        session_ids = {}
+        with State.lock:
+            session_ids = copy.deepcopy(State.sessions.sessions.forward)
+
+        for i in range(self.rowCount()):
+            data = self.item(i, 0).data(Qt.UserRole)
+            sess_id = data.get("id")
+            if sess_id is not None:
+                if sess_id in session_ids.keys():
+                    del session_ids[sess_id]
+
+        for k in session_ids.keys():
+            log.debug(f'ConnectionsTabWidget.add_already_existing: should add {k}')
+            self.add_connection(k, session_ids[k], "{}")
+
+
     def rescan_connections(self):
         if self.rescan:
+            log.debug('ConnectionsTableWidget.rescan_conections')
             self.remove_stales()
             self.custom_resize_columns()
 
+            try:
+                State.events.received_ping.disconnect(self.on_ping)
+            except TypeError:
+                pass
+            State.events.received_ping.connect(self.on_ping)
+
+    def on_ping(self):
+        if self.rescan:
+            log.debug('ConnectionsTableWidget.on_ping')
+            self.add_already_existing()
 
     def add_connection(self, id: str, label: str, js: str):
         rows = self.rowCount()
@@ -161,8 +200,6 @@ class ConnectionsTableWidget(QTableWidget):
         self.remove_stales()
         self.custom_resize_columns()
         self.resizeRowToContents(0)
-
-
 
     def stop_connection(self, id: str, label: str, js: str):
         log.info(f'session stop for {label}')
@@ -239,7 +276,7 @@ class ConnectionTab(QWidget):
         self.conn_live_table = ConnectionsTableWidget(0)
         self.conn_live_table.set_rescan(True)
         self.conn_attic_table = ConnectionsTableWidget(0)
-        self.conn_live_table.set_rescan(False)
+        self.conn_attic_table.set_rescan(False)
 
         leftLayout.addWidget(self.conn_live_table)
 

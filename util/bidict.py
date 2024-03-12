@@ -3,6 +3,9 @@ class BiDict:
         self.forward = {}
         self.inverse = {}
 
+    def size(self):
+        return len(self.forward.keys())
+
     def insert(self, key, value):
         if key in self.forward:
             old_val = self.forward[key]

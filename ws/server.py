@@ -87,6 +87,13 @@ class FlaskThread(QThread):
 
             return jsonify({"status": "success"}), 200
 
+    def get_action_retcode(self, code):
+        if 200 <= code < 300:
+            if State.ui.request_ping_plus:
+                State.ui.request_ping_plus = False
+                return 202
+        return code
+
     def process_access_request(self, payload):
 
         session_label = payload["details"]["session"]
@@ -162,7 +169,7 @@ class FlaskThread(QThread):
 
         State.events.received_session_start.emit(session_id, session_label, json.dumps(payload))
 
-        return jsonify({}), 200
+        return jsonify({}), self.get_action_retcode(200)
 
     def process_connection_stop(self, payload):
         session_label = payload["details"]["info"]["session"]
@@ -177,7 +184,7 @@ class FlaskThread(QThread):
 
         State.events.received_session_stop.emit(session_id, session_label, json.dumps(payload))
 
-        return jsonify({}), 200
+        return jsonify({}), self.get_action_retcode(200)
 
     def process_connection_info(self, payload):
         session_id = payload["id"]
@@ -190,7 +197,7 @@ class FlaskThread(QThread):
 
         State.events.received_session_info.emit(session_id, None, json.dumps(payload))
 
-        return jsonify({}), 200
+        return jsonify({}), self.get_action_retcode(200)
 
     def process_ping(self, payload):
         log.info("::: action - ping")
@@ -204,6 +211,16 @@ class FlaskThread(QThread):
             for id in to_rem:
                 log.debug(f"proxy {id} removed (ping)")
                 State.sessions.sessions.remove(id)
+
+            if payload['proxies-plus']:
+                log.debug("ping-plus received")
+                for tup in payload['proxies-plus']:
+                    tup = tup.split('=')
+                    if len(tup) == 2 and tup[0] and not State.sessions.sessions.forward.get(tup[0]):
+                        State.sessions.sessions.insert(tup[0], tup[1])
+                        log.debug(f"proxy {tup[0]} + {tup[1]} added (ping-plus)")
+
+        State.events.received_ping.emit()
 
         return jsonify({}), 200
 
