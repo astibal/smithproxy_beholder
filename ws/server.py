@@ -212,13 +212,17 @@ class FlaskThread(QThread):
                 log.debug(f"proxy {id} removed (ping)")
                 State.sessions.sessions.remove(id)
 
-            if payload['proxies-plus']:
-                log.debug("ping-plus received")
-                for tup in payload['proxies-plus']:
-                    tup = tup.split('=')
-                    if len(tup) == 2 and tup[0] and not State.sessions.sessions.forward.get(tup[0]):
-                        State.sessions.sessions.insert(tup[0], tup[1])
-                        log.debug(f"proxy {tup[0]} + {tup[1]} added (ping-plus)")
+            try:
+                if payload['proxies-plus']:
+                    log.info("ping-plus received")
+                    for tup in payload['proxies-plus']:
+                        tup = tup.split('=')
+                        if len(tup) == 2 and tup[0] and not State.sessions.sessions.forward.get(tup[0]):
+                            State.sessions.sessions.insert(tup[0], tup[1])
+                            log.debug(f"proxy {tup[0]} + {tup[1]} added (ping-plus)")
+            except KeyError:
+                pass
+
 
         State.events.received_ping.emit()
 

@@ -151,7 +151,7 @@ class ConnectionsTableWidget(QTableWidget):
 
     def rescan_connections(self):
         if self.rescan:
-            log.debug('ConnectionsTableWidget.rescan_conections')
+            log.debug('ConnectionsTableWidget.rescan_connections')
             self.remove_stales()
             self.custom_resize_columns()
 

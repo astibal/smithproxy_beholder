@@ -282,7 +282,11 @@ class ContentWidget(QWidget):
                         'samples': Global.samples,
                         'samples_metadata': Global.samples_metadata,
                         'content_replacement': None,
-                        'auto_process': False
+                        'auto_process': False,
+                        # functions
+                        'print_bytes': print_bytes,
+                        'hex_print': print_bytes,
+                        'hexprint': print_bytes,
                     }
                     exported_data['__appvars__'] = exported_data
 
