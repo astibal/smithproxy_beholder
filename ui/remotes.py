@@ -1,6 +1,7 @@
 import logging
 import time
 from pprint import pformat
+import atexit
 
 from PyQt5.QtCore import QTimer, QSize, pyqtSignal, Qt
 from PyQt5.QtWidgets import QApplication, QTableWidget, QTableWidgetItem, QCheckBox, QComboBox, QWidget, QVBoxLayout, \
@@ -50,6 +51,18 @@ class SmithproxyAPI:
 
     def __del__(self):
         self.unregister_webhook_service_if_needed()
+
+    def serialize_out(self) -> dict:
+        return {
+            'base_url': self.base_url,
+            'verify': self.verify,
+            'secret': self.secret,
+        }
+
+    def serialize_in(self, data: dict):
+        self.base_url = data['base_url']
+        self.verify = data['verify']
+        self.secret = data['secret']
 
     def set_secret(self, secret: str):
         self.secret = secret
@@ -149,7 +162,7 @@ class SmithproxyAPI:
 SxDict: Dict[str, SmithproxyAPI]
 class TableWidget(QTableWidget):
 
-    tablechanged = pyqtSignal(int, int)
+    tablechanged = pyqtSignal()
 
     def __init__(self, *args, **kwargs):
         QTableWidget.__init__(self, *args, **kwargs)
@@ -183,11 +196,54 @@ class TableWidget(QTableWidget):
         self.itemChanged.connect(self.on_item_changed)
         self.on_item_changed_white_list = [] # (row, col) tuple list, where we avoid recursion
 
+        atexit.register(self.cleanup)
+
+    def serialize_out(self):
+
+        ret = {
+            'remotes': []
+        }
+
+        for row in range(self.rowCount()):
+            url = str(self.item(row, 0).text())
+            verify = self.cellWidget(row, self.COL_VERIFY).isChecked()
+            typ = self.cellWidget(row, self.COL_TYPE).currentText()
+            conn = self.cellWidget(row, self.COL_CONNECT).isChecked()
+
+            entry = {
+                'type': typ,
+                'connected': conn,
+                'data': self.sx_remotes[url].serialize_out()
+            }
+            ret['remotes'].append(entry)
+
+        return ret
+
+
+    def serialize_in(self, indata: dict):
+        if 'remotes' in indata.keys():
+            for item in indata['remotes']:
+                try:
+                    if item['type'] == "Smithproxy":
+                        self.add_smithproxy(item['data']['base_url'],
+                                            item['data']['secret'],
+                                            item['data']['verify'], "Smithproxy", item['connected'])
+                except KeyError:
+                    pass
+
+    def cleanup(self):
+        for remote in self.sx_remotes.keys():
+            sx = self.sx_remotes[remote]
+            sx.unregister_webhook_service()
+
     def activate(self):
         self.inactive = False
 
     def deactivate(self):
         self.inactive = True
+
+    def webhookUrl(self):
+        return self.service
 
     def setWebhookUrl(self, url: str):
         self.service = url
@@ -346,20 +402,21 @@ class TableWidget(QTableWidget):
             sx.AUTHENTICATED = False
 
         self.on_item_changed_white_list.remove(pos)
+        self.tablechanged.emit()
 
     def contextMenuEvent(self, event):
         contextMenu = QMenu(self)
         addAction = contextMenu.addAction("Add")
-        addAction.triggered.connect(self.addFunction)
+        addAction.triggered.connect(self.add_defautl_row)
         remAction = contextMenu.addAction("Remove")
-        remAction.triggered.connect(self.remFunction)
+        remAction.triggered.connect(self.remove_row)
 
         action = contextMenu.exec_(self.viewport().mapToGlobal(event.pos()))
 
-    def addFunction(self):
+    def add_defautl_row(self):
         self.add_smithproxy('https://', "verysecret", True, 'Smithproxy', False)
 
-    def remFunction(self):
+    def remove_row(self):
 
         item = self.selectedItems()[0]
         row = item.row()
@@ -373,14 +430,17 @@ class TableWidget(QTableWidget):
             del self.sx_remotes[url]
 
         self.removeRow(row)
+        self.tablechanged.emit()
 
 
 
 class RemotesWidget(QWidget):
+
+    service_change = pyqtSignal()
     def __init__(self, service: str):
         super().__init__()
 
-        self.service = service
+        #self.service = service
         self.layout = QVBoxLayout()
 
 
@@ -388,7 +448,7 @@ class RemotesWidget(QWidget):
         self.layout.addWidget(self.label)
 
         hb = QHBoxLayout()
-        self.my_url = QLineEdit(self.service)
+        self.my_url = QLineEdit(service)
         self.my_url.setReadOnly(True)
         self.my_url.setDisabled(True)
         self.url_button = CheckButton("Edit")
@@ -402,7 +462,7 @@ class RemotesWidget(QWidget):
 
         hb2 = QHBoxLayout()
         self.my_service_lab = QLabel("Active service URL:  ")
-        self.my_service = QLabel(self.service)
+        self.my_service = QLabel(service)
         hb2.addWidget(self.my_service_lab)
         hb2.addWidget(self.my_service)
         hb2.addStretch(2)
@@ -414,7 +474,19 @@ class RemotesWidget(QWidget):
 
         self.setLayout(self.layout)
 
+    def serialize_in(self, data: dict):
+        service = data["service"]
+        self.table.setWebhookUrl(service)
+        self.my_url.setText(service)
+        self.my_service.setText(service)
 
+        self.table.serialize_in(data['entries'])
+
+    def serialize_out(self):
+        return {
+            "service": self.table.webhookUrl(),
+            "entries": self.table.serialize_out()
+        }
 
     def invalidate_all_remotes(self):
         pass
@@ -426,14 +498,16 @@ class RemotesWidget(QWidget):
         if not self.url_button.isChecked():
             self.url_button.setText("Edit")
             url = self.my_url.text()
-            if url != self.service:
+            if url != self.table.webhookUrl():
                 self.table.setWebhookUrl(url)
 
                 print("Service change")
                 self.invalidate_all_remotes()
 
-            self.service = self.my_url.text()
-            self.my_service.setText(self.service)
+                self.table.setWebhookUrl(url)
+                self.service_change.emit()
+
+            self.my_service.setText(self.table.webhookUrl())
         else:
             self.url_button.setText("Save")
 

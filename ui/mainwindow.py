@@ -5,7 +5,9 @@ from PyQt5.QtWidgets import QMainWindow, QTabWidget, QAction, QFileDialog, QMess
 
 from ui.config import Config
 from ui.mdviewer import MarkdownViewer, Text
+from ui.remotes import RemotesWidget
 from ui.tab_content import ContentWidget
+from ui.tab_remotes import RemoteTab
 from ui.tab_workbench import WorkbenchTab
 from ui.tab_connections import ConnectionTab
 from ui.tab_log import LogWidget
@@ -59,6 +61,9 @@ class MainWindow(QMainWindow):
 
         self.connection_widget = ConnectionTab()
         self.tab_widget.addTab(self.connection_widget, 'Connections')
+
+        self.remotes_widget = RemoteTab()
+        self.tab_widget.addTab(self.remotes_widget, 'Remotes')
 
         self.log_widget = LogWidget()
         self.tab_widget.addTab(self.log_widget, 'Logs')
