@@ -141,7 +141,10 @@ class SmithproxyAPI:
         }
         url = self.make_url(SmithproxyAPI.API.WH_REGISTER)
         self.access_table[url] = time.time()
-        return self._send_request("POST", url, pay)
+        ret = self._send_request("POST", url, pay)
+        if not ret:
+            self.AUTHENTICATED = False
+        return ret
 
     def unregister_webhook_service_if_needed(self):
         if self.AUTHENTICATED:
