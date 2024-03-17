@@ -2,7 +2,8 @@ from PyQt5.QtWidgets import QApplication, QMainWindow, QAction, QDialog, QVBoxLa
     QMessageBox, QCheckBox, QStyle, QHBoxLayout, QFileDialog
 
 from ui.config import Config
-
+import logging
+log = logging.getLogger(__name__)
 
 class SettingsDialog(QDialog):
     def __init__(self):
@@ -14,6 +15,7 @@ class SettingsDialog(QDialog):
         self.tls_field = QCheckBox()
         self.cert_field = QLineEdit()
         self.key_field = QLineEdit()
+        self.ca_field = QLineEdit()
 
         with Config.lock:
             self.address_field.setText(Config.config.get('address', ''))
@@ -22,6 +24,7 @@ class SettingsDialog(QDialog):
             self.tls_field.setChecked(Config.config.get('use_tls', False))
             self.cert_field.setText(Config.config.get('cert_path', ''))
             self.key_field.setText(Config.config.get('key_path', ''))
+            self.ca_field.setText(Config.config.get('ca_file', ''))
 
         save_button = QPushButton('Save and Close')
         save_button.clicked.connect(self.save_settings)
@@ -56,6 +59,16 @@ class SettingsDialog(QDialog):
         keylayout.addWidget(key_filepicker)
         layout.addLayout(keylayout)
 
+        layout.addWidget(QLabel("CA file (optional)"))
+        calayout = QHBoxLayout()
+        calayout.addWidget(self.ca_field)
+        ca_filepicker = QPushButton()
+        ca_filepicker.setIcon(self.style().standardIcon(QStyle.SP_DialogOpenButton))
+        ca_filepicker.setFixedWidth(40)
+        ca_filepicker.clicked.connect(self.get_file_cacert)
+        calayout.addWidget(ca_filepicker)
+        layout.addLayout(calayout)
+
         layout.addWidget(save_button)
 
         self.setLayout(layout)
@@ -74,6 +87,13 @@ class SettingsDialog(QDialog):
 
         if f:
             self.key_field.setText(f)
+
+    def get_file_cacert(self):
+        f =  self.openFilePicker("Select CA bundle file",
+                                   "Certificate Files (*.pem);;All Files (*)")
+
+        if f:
+            self.ca_field.setText(f)
 
     def openFilePicker(self, title: str, filter: str) -> str:
         # example filter: "Certificate Files (*.pem);;All Files (*)"
@@ -100,8 +120,14 @@ class SettingsDialog(QDialog):
             "api_key": self.api_key_field.text(),
             "use_tls":  self.tls_field.isChecked(),
             "cert_path": self.cert_field.text(),
-            "key_path": self.key_field.text()
+            "key_path": self.key_field.text(),
+            "ca_file": self.ca_field.text()
         }
+
+        if self.ca_field.text():
+            from ui.remotes import options
+            options.ca_bundle = self.ca_field.text()
+            log.info(f"ca bundle set {options.ca_bundle}")
 
         with Config.lock:
             Config.config.update(config_patch)

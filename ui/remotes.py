@@ -29,6 +29,9 @@ log.setLevel(logging.DEBUG)
 logsx = logging.getLogger('sx_api')
 logsx.setLevel(logging.DEBUG)
 
+class options:
+    ca_bundle = None
+
 class SmithproxyAPI:
 
     class API:
@@ -88,7 +91,11 @@ class SmithproxyAPI:
         params = {"key": f"{self.secret}"}
 
         try:
-            response = requests.get(url, params=params, verify=self.verify)
+            verify_value = self.verify
+            if self.verify and options.ca_bundle:
+                verify_value = options.ca_bundle
+
+            response = requests.get(url, params=params, verify=verify_value)
             # response.text contains the body of the server's response
             if response.status_code == 200 and response.content:
 
@@ -114,7 +121,11 @@ class SmithproxyAPI:
     def _send_request(self, method: str, url: str, payload: dict) -> bool:
         # generic requests
         try:
-            response = requests.request(method=method, url=url, json=payload, verify=self.verify)
+            verify_value = self.verify
+            if self.verify and options.ca_bundle:
+                verify_value = options.ca_bundle
+
+            response = requests.request(method=method, url=url, json=payload, verify=verify_value)
             if response.status_code == 200:
                 log.info(f"_send_request: status: {response.status_code}")
                 self.access_table[url] = time.time()
