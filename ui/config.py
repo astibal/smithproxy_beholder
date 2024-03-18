@@ -72,6 +72,7 @@ class Config:
         except FileNotFoundError as e:
             logging.fatal(f"Config.load_config: {e}")
 
+    @staticmethod
     def save_content_script(slot_number: int, content: str):
         with Config.lock:
             cnfp = Config.config['project_path']
@@ -82,6 +83,7 @@ class Config:
         with open(os.path.join(cnfp, f'slot_{slot_number}.py'), 'w') as f:
             f.write(content)
 
+    @staticmethod
     def load_content_script(slot_number: int) -> str:
         with Config.lock:
             cnfp = Config.config['project_path']
