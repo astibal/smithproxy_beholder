@@ -127,7 +127,7 @@ class SmithproxyAPI:
 
             response = requests.request(method=method, url=url, json=payload, verify=verify_value)
             if response.status_code == 200:
-                log.info(f"_send_request: status: {response.status_code}")
+                log.info(f"_send_request: '{url[len(self.base_url):]}' status: {response.status_code}")
                 self.access_table[url] = time.time()
                 return True
             else:

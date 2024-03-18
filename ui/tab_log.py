@@ -3,7 +3,7 @@ import datetime
 
 from PyQt5 import QtCore
 from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import QVBoxLayout, QWidget, QTextEdit, QComboBox, QHBoxLayout
+from PyQt5.QtWidgets import QVBoxLayout, QWidget, QTextEdit, QComboBox, QHBoxLayout, QLabel
 
 from util.fonts import load_font_prog, remove_ansi_color_codes
 
@@ -44,8 +44,10 @@ class WidgetLogger(logging.Handler, QtCore.QObject):
 
 
 class LogWidget(QWidget):
+
     def __init__(self):
         super().__init__()
+        self.MAXLINES = 100
         self.widget_logger = None
         self.initUI()
 
@@ -68,6 +70,22 @@ class LogWidget(QWidget):
         self.collectButton.clicked.connect(self.on_collect_button_clicked)
         buttonBar.addWidget(self.collectButton)
 
+
+        linesLab = QLabel("Lines:")
+        linesLab.setMaximumWidth(200)
+        buttonBar.addWidget(linesLab)
+
+        self.lineCount = QComboBox()
+        self.lineCount.setMaximumWidth(200)
+        self.lineCount.setCurrentText(f"{self.MAXLINES}")
+        self.lineCount.addItems([f"{self.MAXLINES}", "500", "1000", "5000"])
+        self.lineCount.currentTextChanged.connect(self.on_linecount_change)
+        buttonBar.addWidget(self.lineCount)
+        buttonBar.addStretch(4)
+
+        self.editLinesLab = QLabel()
+        buttonBar.addWidget(self.editLinesLab)
+
         layout.addLayout(buttonBar)
 
         # add logging to the widget
@@ -75,7 +93,26 @@ class LogWidget(QWidget):
         self.logEdit.setReadOnly(True)
         font = load_font_prog()
         self.logEdit.setFont(font)
+        self.logEdit.textChanged.connect(self.on_text_change)
         self.setLayout(layout)
+
+    def remove_first_n_lines(self, n):
+        self.logEdit.setUpdatesEnabled(False)
+        cursor = self.logEdit.textCursor()  # Get the QTextCursor
+        cursor.movePosition(cursor.Start)  # Move cursor to start of text
+        for _ in range(n):
+            cursor.movePosition(cursor.Down, cursor.KeepAnchor)  # Select down to next line
+        cursor.removeSelectedText()  # Remove the selected text
+        self.logEdit.setUpdatesEnabled(True)
+
+    def truncate_to_maxlines(self):
+        count = self.logEdit.document().blockCount()
+        if count > self.MAXLINES:
+            self.remove_first_n_lines(count - self.MAXLINES)
+
+    def on_linecount_change(self):
+        count = int(self.lineCount.currentText())
+        self.MAXLINES = count
 
     def on_collect_button_clicked(self):
         now = datetime.datetime.now()
@@ -88,4 +125,15 @@ class LogWidget(QWidget):
             self.widget_logger.enabled = False
 
     def on_log_level(self, text):
+
+        rem = logging.getLogger('remotes')
+        rem.setLevel(text)
+        sx = logging.getLogger('sx_api')
+        sx.setLevel(text)
+
         log.setLevel(text)
+
+    def on_text_change(self):
+        self.truncate_to_maxlines()
+        c = self.logEdit.document().blockCount()
+        self.editLinesLab.setText(f"Lines: {c}")
