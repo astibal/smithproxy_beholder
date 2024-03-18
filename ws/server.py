@@ -4,10 +4,11 @@ import logging
 import ssl
 from pprint import pformat
 import traceback
+from typing import AnyStr
 
 from PyQt5.QtCore import QThread, pyqtSignal
 from PyQt5.QtWidgets import QMessageBox
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, abort
 
 from ui.state import State
 from ui.config import Config
@@ -31,6 +32,36 @@ class FlaskThread(QThread):
         FlaskThread.app = Flask(__name__)
         FlaskThread.app.logger.handlers = []
         FlaskThread.app.logger.setLevel("ERROR")
+
+        @FlaskThread.app.route('/stream-updates/<string:key>', methods=['POST'])
+        def stream(key: str):
+            with Config.lock:
+                api_key = Config.config["api_key"]
+
+            if 'Transfer-Encoding' not in request.headers or \
+                    'chunked' not in request.headers['Transfer-Encoding']:
+                abort(411)
+
+            if api_key and key != api_key:
+                log.error(f"Invalid API key {key}")
+                abort(400)
+
+            while True:
+                # First read the chunk size (in hex)
+                chunk_size = request.stream.readline()
+                if chunk_size == b'':
+                    return jsonify({"status": "success"})
+
+                # Convert chunk size from hex to int
+                chunk_size = int(chunk_size, 16)
+
+                # Read the chunk data of `chunk_size` length
+                chunk_data = request.stream.read(chunk_size)
+
+                # Skip the trailing `\r\n` after the chunk data
+                request.stream.read(2)
+
+                self.process_stream_update(chunk_data)
 
         @FlaskThread.app.route('/webhook/<string:key>', methods=['POST'])
         def webhook(key: str):
@@ -223,10 +254,12 @@ class FlaskThread(QThread):
             except KeyError:
                 pass
 
-
         State.events.received_ping.emit()
 
         return jsonify({}), 200
+
+    def process_stream_update(self, chunk_data: AnyStr):
+        log.info(f'stream-update: {len(chunk_data)}B received: {str(chunk_data)}')
 
     def run(self):
         with Config.lock:
