@@ -1,3 +1,5 @@
+import hashlib
+import ssl
 import threading
 
 from PyQt5 import QtCore
@@ -15,6 +17,30 @@ class State:
     # Shared data structure for response
     response_data = {"processed": False, "message": ""}
     lock = threading.Lock()
+
+
+    class auth:
+        dynamic_data = {}  # token -> identity string (for future use)
+        dynamic_token = []
+        MAX_TOKENS = 200
+        @staticmethod
+        def register(identity) -> str:
+            rand = ssl.RAND_bytes(32)
+            hashed = hashlib.sha256(rand)
+            hashed = hashed.hexdigest()
+            State.auth.dynamic_data[hashed] = identity
+            State.auth.dynamic_token.append(hashed)
+
+            if len(State.auth.dynamic_token) > State.auth.MAX_TOKENS:
+                State.auth.dynamic_token.pop(0)
+                del State.auth.dynamic_data[hashed]
+
+            return hashed
+
+        @staticmethod
+        def validate_token(tok: str) -> bool:
+            return tok in State.auth.dynamic_token
+
 
     class StateEvents(QtCore.QObject):
         # Shared event for button click signaling

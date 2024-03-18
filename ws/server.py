@@ -15,6 +15,7 @@ from ui.config import Config
 
 log = logging.getLogger()
 
+
 class FlaskThread(QThread):
     # Create the Flask app
     app = None
@@ -33,18 +34,15 @@ class FlaskThread(QThread):
         FlaskThread.app.logger.handlers = []
         FlaskThread.app.logger.setLevel("ERROR")
 
-        @FlaskThread.app.route('/stream-updates/<string:key>', methods=['POST'])
-        def stream(key: str):
-            with Config.lock:
-                api_key = Config.config["api_key"]
+        @FlaskThread.app.route('/stream-updates/<string:key>/<string:dyn>', methods=['POST'])
+        def stream(key: str, dyn: str):
+            if not FlaskThread.authenticate(key, dyn):
+                log.error(f"Invalid credentials {key}/{dyn}")
+                abort(400)
 
             if 'Transfer-Encoding' not in request.headers or \
                     'chunked' not in request.headers['Transfer-Encoding']:
                 abort(411)
-
-            if api_key and key != api_key:
-                log.error(f"Invalid API key {key}")
-                abort(400)
 
             while True:
                 # First read the chunk size (in hex)
@@ -63,15 +61,12 @@ class FlaskThread(QThread):
 
                 self.process_stream_update(chunk_data)
 
-        @FlaskThread.app.route('/webhook/<string:key>', methods=['POST'])
-        def webhook(key: str):
+        @FlaskThread.app.route('/webhook/<string:key>/<string:dyn>', methods=['POST'])
+        def webhook(key: str, dyn: str):
 
-            with Config.lock:
-                api_key = Config.config["api_key"]
-
-            if api_key and key != api_key:
-                log.error(f"Invalid API key {key}")
-                return jsonify({"error": "Invalid API key"}), 400
+            if not FlaskThread.authenticate(key, dyn):
+                log.error(f"Invalid credentials {key}/{dyn}")
+                return jsonify({"error": "Invalid credentials"}), 400
 
             log.debug(f"== Handler start:")
             # some code to check key string
@@ -257,6 +252,21 @@ class FlaskThread(QThread):
         State.events.received_ping.emit()
 
         return jsonify({}), 200
+
+    def authenticate(api_key: str, dynamic_token: str) -> bool:
+        if api_key is None or dynamic_token is None:
+            return False
+
+        with Config.lock:
+            key = Config.config["api_key"]
+            if api_key != key:
+                return False
+
+        with State.lock:
+            if not State.auth.validate_token(dynamic_token):
+                return False
+
+        return True
 
     def process_stream_update(self, chunk_data: AnyStr):
         log.info(f'stream-update: {len(chunk_data)}B received: {str(chunk_data)}')

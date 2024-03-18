@@ -6,6 +6,8 @@ import atexit
 from PyQt5.QtCore import QTimer, QSize, pyqtSignal, Qt
 from PyQt5.QtWidgets import QApplication, QTableWidget, QTableWidgetItem, QCheckBox, QComboBox, QWidget, QVBoxLayout, \
     QPushButton, QLabel, QTextEdit, QLineEdit, QHBoxLayout, QMenu
+
+from ui.state import State
 from util.fonts import load_font_prog
 from ui.checkbutton import CheckButton
 from ui.msg import dialog_yes_no
@@ -15,6 +17,9 @@ import requests
 import json
 from typing import Dict
 import functools
+
+from ws.server import FlaskThread
+
 
 def is_url(text: str) -> bool:
     try:
@@ -51,9 +56,13 @@ class SmithproxyAPI:
 
         self.AUTHENTICATED = False
         self.access_table = {} # url: str -> timestamp (to track where we have been and when)
+        self.wh_dynamic_key = None
 
     def __del__(self):
         self.unregister_webhook_service_if_needed()
+
+    def set_dynamic_key(self, key: str):
+        self.wh_dynamic_key = key
 
     def serialize_out(self) -> dict:
         return {
@@ -142,11 +151,14 @@ class SmithproxyAPI:
 
     @authenticated
     def register_webhook_service(self, webhook_url: str, webhook_verify: bool) -> bool:
+        wh = webhook_url
+        if self.wh_dynamic_key:
+            wh = f"{wh}/{self.wh_dynamic_key}"
         pay = {
             "auth_token": self.api_token,
             "csrf_token": self.csrf_token,
             "params": {
-                "rande_url": f"{webhook_url}",
+                "rande_url": f"{wh}",
                 "rande_tls_verify": webhook_verify,
             }
         }
@@ -302,6 +314,8 @@ class TableWidget(QTableWidget):
         self.connect_status[url] = False
         sx = SmithproxyAPI(url, verify)
         sx.set_secret(token)
+        with State.lock:
+            sx.set_dynamic_key(State.auth.register(url))
         self.sx_remotes[url] = sx
 
         self.on_item_changed_white_list.append((0,0))
@@ -400,6 +414,9 @@ class TableWidget(QTableWidget):
         else:
             new = True
             sx = SmithproxyAPI(url, verify)
+            with State.lock:
+                sx.set_dynamic_key(State.auth.register(url))
+
             self.sx_remotes[url] = sx
             log.debug(f"new smithproxy at '{url}'")
 
