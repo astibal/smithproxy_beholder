@@ -16,7 +16,8 @@ class Config:
         'api_key': "123",
         'use_tls': False,
         'cert_path': os.path.join(os.path.expanduser('~'), _default_app_dir, 'cert.pem'),
-        'key_path': os.path.join(os.path.expanduser('~'), _default_app_dir, 'key.pem')
+        'key_path': os.path.join(os.path.expanduser('~'), _default_app_dir, 'key.pem'),
+        'ca_file': os.path.join(os.path.expanduser('~'), _default_app_dir, '')
     }
     config = {}
     config_path = os.path.join(os.path.expanduser('~'), '.smithproxy')
@@ -50,6 +51,11 @@ class Config:
                         Config.ssl_context = cx
                     except Exception as e:
                         logging.error(f"error creating TLS context: {e}")
+
+                if Config.config['ca_file']:
+                    from ui.remotes import options
+                    options.ca_bundle = Config.config['ca_file']
+                    logging.info(f"remotes ca bundle set {options.ca_bundle}")
 
         except FileNotFoundError as e:
             logging.fatal(f"Config.load_config: {e}")
