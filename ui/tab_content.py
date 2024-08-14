@@ -5,7 +5,7 @@ import json
 import sys
 
 from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QKeySequence
+from PyQt5.QtGui import QKeySequence, QTextCursor
 from PyQt5.QtWidgets import QPushButton, QVBoxLayout, QWidget, QTextEdit, QSplitter, \
     QHBoxLayout, QCheckBox, QLabel, QShortcut
 
@@ -140,6 +140,9 @@ class ContentWidget(QWidget):
         sc_exe_script = QShortcut(QKeySequence(Qt.CTRL + Qt.Key_S), self)
         sc_exe_script.activated.connect(self.executeButton.click)
 
+        self.clearStorageButton = QPushButton('>> Clear Storage <<')
+        self.clearStorageButton.clicked.connect(self.clear_storage)
+
         self.outputEdit = QTextEdit()
         self.outputEdit.setFont(font)
         self.outputEdit.setReadOnly(True)
@@ -174,7 +177,12 @@ class ContentWidget(QWidget):
         self.on_script_slot_button(1)
 
         rightTopLayout.addWidget(self.scriptEdit)
-        rightTopLayout.addWidget(self.executeButton)
+
+        rightButtons = QHBoxLayout()
+        rightButtons.addWidget(self.executeButton)
+        rightButtons.addWidget(self.clearStorageButton)
+        rightBottomLayout.addLayout(rightButtons)
+
         rightBottomLayout.addWidget(self.outputEdit)
         rightTopContainer.setLayout(rightTopLayout)
         rightBottomContainer.setLayout(rightBottomLayout)
@@ -261,6 +269,10 @@ class ContentWidget(QWidget):
 
             raise TypeError("content_replacement: must be 'bytes' or 'str'")
 
+    def clear_storage(self):
+        with Global.lock:
+            Global.storage = {}
+
     def execute_script(self):
         # Get the script from scriptEdit
         script = self.scriptEdit.text()
@@ -311,7 +323,11 @@ class ContentWidget(QWidget):
                 return
 
         # Display the output in the outputEdit text box
-        self.outputEdit.setText(output)
+        if output is not None and output != "":
+            self.outputEdit.setText(output)
+            cursor = self.outputEdit.textCursor()
+            cursor.movePosition(QTextCursor.End)
+            self.outputEdit.setTextCursor(cursor)
 
         # collect results
         if exported_data['content_replacement']:
