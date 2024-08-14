@@ -230,11 +230,23 @@ class TableWidget(QTableWidget):
             'remotes': []
         }
 
+        verify = True
+        typ = "Smithproxy"
+        conn = False
+
         for row in range(self.rowCount()):
             url = str(self.item(row, 0).text())
-            verify = self.cellWidget(row, self.COL_VERIFY).isChecked()
-            typ = self.cellWidget(row, self.COL_TYPE).currentText()
-            conn = self.cellWidget(row, self.COL_CONNECT).isChecked()
+            verify_widget = self.cellWidget(row, self.COL_VERIFY)
+            if verify_widget is not None:
+                verify = verify_widget.isChecked()
+
+            typ_widget = self.cellWidget(row, self.COL_TYPE)
+            if typ_widget is not None:
+                typ = typ_widget.currentText()
+
+            conn_widget = self.cellWidget(row, self.COL_CONNECT)
+            if conn_widget is not None:
+                conn = self.cellWidget(row, self.COL_CONNECT).isChecked()
 
             entry = {
                 'type': typ,
