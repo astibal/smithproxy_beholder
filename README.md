@@ -1,9 +1,13 @@
-# SxWhApp - Smithproxy WebHook Application
+# Beholder - Smithproxy traffic controller
 
-SxWhApp is application running webhook service for Smithproxy.   
+Beholder is PyQt application running webhook service for Smithproxy.   
 It's designed to receive webhook requests and perform configured actions.
 
-Content: custom scripts can process or modify proxied traffic
+Content Tab: custom scripts can process or modify proxied traffic, capture samples
+Workbench Tab: test your scripts offline
+Connections Tab: see active and past connections list
+Remotes: let you configure smithproxy hosts to connect
+Logs: collect application logs on demand
 
 ## Mandatory Smithproxy webhook configuration
 
@@ -19,18 +23,15 @@ settings =
   }
 }
 ```
-Note: above config is very easy to configure in Smithproxy CLI
+Note: this config is very easy to configure in Smithproxy CLI
 
 ## Payload processing / modification
-SxWhApp can receive 'content' webhook messages. Those are specific
-requests containing L7 payload data, asking sxwhapp to display or modify them.
+Beholder can receive 'content' webhook messages. Those are specific
+requests containing L7 payload data, asking Beholder to display or modify them.
 They can be modified in the app and sent back to proxy to replace original payload.  
 
 Process of discovering traffic payload is simple, but multi-stage. It can be very
 manual, but after script refinement it can run automatically.  
-
-App makes connection keepalive (if supported) and has visual controls indicating 
-connection status.
 
 ### Content replacement configuration
 
@@ -43,13 +44,8 @@ content_profiles =
     write_payload = true
     write_format = "pcap_single"
     webhook_enable = true             # <<< enable webhook content messages
-    webhook_lock_traffic = true
-    content_rules = ( 
-      {
-        match = "root"
-        replace = "root"
-        replace_each_nth = 0
-      } )
+    webhook_lock_traffic = true       # <<< "lock" the rest of the traffic before getting result 
+    content_rules = ( ) 
   }
 }
 ```
