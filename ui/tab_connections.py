@@ -123,10 +123,15 @@ class ConnectionsTableWidget(QTableWidget):
                         # find session in session table
                         data = item.data(Qt.UserRole)
                         id = data.get("id", None)
-                        with (State.lock):
+
+                        is_wiped = False
+                        with State.lock:
                             if id and State.sessions.sessions.size() > 0 \
                                     and State.sessions.sessions.forward.get(id) is None:
-                                status_item.setText("WIPED")
+                                    is_wiped = True
+
+                        if is_wiped:
+                            status_item.setText("WIPED")
 
 
         if len(to_rem) > 0:

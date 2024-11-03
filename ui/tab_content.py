@@ -1,17 +1,20 @@
 import base64
 import copy
+import datetime
 import functools
 import json
 import sys
+import time
 
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QKeySequence, QTextCursor
 from PyQt5.QtWidgets import QPushButton, QVBoxLayout, QWidget, QTextEdit, QSplitter, \
     QHBoxLayout, QCheckBox, QLabel, QShortcut
 
+import util.util
 from util.fonts import load_font_prog
 from util.err import error_pyperclip
-from util.util import capture_stdout_as_string, print_bytes
+from util.util import capture_stdout_as_string, print_bytes, CharFilter
 from ui.static_text import S
 from .checkbutton import CheckButton
 from .common import create_python_editor
@@ -222,11 +225,11 @@ class ContentWidget(QWidget):
         if state == Qt.CheckState.Checked:
             with State.lock:
                 State.ui.skip_click = True
-                self.textEdit.setText(S.txt_skip_checked)
+            self.textEdit.setText(S.txt_skip_checked)
         else:
             with State.lock:
                 State.ui.skip_click = False
-                self.textEdit.setText(S.txt_skip_unchecked)
+            self.textEdit.setText(S.txt_skip_unchecked)
 
     def on_script_changed(self):
         self.autoRunCheckBox.setCheckState(Qt.Unchecked)
@@ -397,7 +400,12 @@ class ContentWidget(QWidget):
             with State.lock:
                 should_execute = State.ui.content_tab.autorun
             if should_execute:
+                d1 = time.time()
                 self.execute_script()
+                d2 = time.time()
+                log.info(f"::: content script execution took {(d2 - d1):.2f}s")
+                # do a "click"
+                State.events.button_process.set()
 
             self.processButton.setDisabled(False)
             self.textEdit.setStyleSheet("")
