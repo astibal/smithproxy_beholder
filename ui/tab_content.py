@@ -46,7 +46,7 @@ class ContentWidget(QWidget):
 
         # Start the Flask thread
         self.flaskThread = ws.server.FlaskThread()
-        self.flaskThread.received_content.connect(self.update_content_text)
+        self.flaskThread.received_content.connect(self.update_content)
         self.flaskThread.start()
 
         State.events.received_session_start.connect(self.on_session_start)
@@ -72,11 +72,7 @@ class ContentWidget(QWidget):
         self.textEdit.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
         self.textEdit.setLineWrapMode(QTextEdit.NoWrap)
 
-        self.processButton = QPushButton('Process Request')
-        self.processButton.clicked.connect(self.on_button_clicked)
-        self.processButton.setDisabled(True)
-
-        self.skipConditionChkBox = QCheckBox('Skip', self)
+        self.skipConditionChkBox = QCheckBox('SKIP - pass everything!', self)
         sc_skipConditionChkBox = QShortcut(QKeySequence(Qt.CTRL + Qt.Key_K), self)
         sc_skipConditionChkBox.activated.connect(self.skipConditionChkBox.toggle)
 
@@ -112,9 +108,9 @@ class ContentWidget(QWidget):
         leftLayout.addWidget(self.textEdit)
 
         leftButtons = QHBoxLayout()
-        leftButtons.addWidget(self.processButton)
-        sc_processButton = QShortcut(QKeySequence(Qt.CTRL + Qt.Key_P), self)
-        sc_processButton.activated.connect(self.processButton.click)
+        # leftButtons.addWidget(self.processButton)
+        # sc_processButton = QShortcut(QKeySequence(Qt.CTRL + Qt.Key_P), self)
+        # sc_processButton.activated.connect(self.processButton.click)
 
         leftButtons.addWidget(self.skipConditionChkBox)
         leftButtons.addWidget(self.replacementLabel)
@@ -204,21 +200,20 @@ class ContentWidget(QWidget):
 
         self.setLayout(mainLayout)
 
-    def on_button_clicked(self):
+    def on_content_processed(self):
         # Update shared data structure to be included in the Flask response
 
         with State.lock:
             State.response_data["processed"] = True
             State.response_data["message"] = "Request has been processed successfully."
-        # Signal the Flask thread that the button has been clicked
-        State.events.button_process.set()
+
+        State.events.content_processed.set()
 
         self.textEdit.clear()
         with State.lock:
             State.ui.content_data = None
-        self.processButton.setDisabled(True)
 
-        ContentWidget.set_label_bg_color(self.replacementLabel, "LightGray")
+        ContentWidget.set_label_bg_color(self.replacementLabel, "Gray")
         self.replacementLabel.setText("No replacement")
 
     def on_skip_condition_toggled(self, state):
@@ -359,12 +354,11 @@ class ContentWidget(QWidget):
         else:
             log.debug("no replacements this time")
             self.replacementLabel.setText(f"No replacement")
-            ContentWidget.set_label_bg_color(self.replacementLabel, "LightGray")
+            ContentWidget.set_label_bg_color(self.replacementLabel, "Gray")
 
-        if exported_data['auto_process']:
-            self.on_button_clicked()
+        State.events.content_processed.set()
 
-    def update_content_text(self, data):
+    def update_content(self, data):
         log.debug("update_content_text")
         with State.lock:
             should_update = not State.ui.skip_click
@@ -404,10 +398,7 @@ class ContentWidget(QWidget):
                 self.execute_script()
                 d2 = time.time()
                 log.info(f"::: content script execution took {(d2 - d1):.2f}s")
-                # do a "click"
-                State.events.button_process.set()
 
-            self.processButton.setDisabled(False)
             self.textEdit.setStyleSheet("")
 
     def on_script_slot_button(self, number):

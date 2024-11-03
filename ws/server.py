@@ -1,14 +1,16 @@
 import base64
+import datetime
 import json
 import logging
 import ssl
+import time
 from pprint import pformat
 import traceback
 from typing import AnyStr
 
 from PyQt5.QtCore import QThread, pyqtSignal
 from PyQt5.QtWidgets import QMessageBox
-from flask import Flask, request, jsonify, abort
+from flask import Flask, request, jsonify, abort, Response
 
 from ui.state import State
 from ui.config import Config
@@ -97,6 +99,9 @@ class FlaskThread(QThread):
                 elif payload["action"] == "connection-info":
                     return self.process_connection_info(payload)
 
+                elif payload["action"] == "neighbor":
+                    return Response(self.process_neighbor(payload), headers={'Content-Type': 'application/json'})
+
                 elif payload["action"] == "ping":
                     return self.process_ping(payload)
 
@@ -142,21 +147,33 @@ class FlaskThread(QThread):
         }
 
         try:
-            reply_body["action"] = "replace"
-            reply_body["content"] = payload['details']['info']['content']
+            reply_body["action"] = "unchanged"
+
+            # original data are here:
+            # reply_body["content"] = payload['details']['info']['content']
 
             with State.lock:
-                wait_for_data = not State.ui.skip_click
+                we_are_in = not State.ui.skip_click
+                auto_run = State.ui.content_tab.autorun
 
-            if wait_for_data:
-                # data = request.get_json(force=True)
-                data = request.get_data().decode()
-                self.received_content.emit(data)  # Emit signal with JSON data
+            data = request.get_data().decode()
+            self.received_content.emit(data)  # Emit signal with JSON data
 
-                log.debug("Now waiting for data")
-                State.events.button_process.wait()  # Wait for the button to be clicked
-                State.events.button_process.clear()  # Reset the event for the next API call
-                log.debug("Data received")
+            # not_skipping means we make UI to see the packet
+            # auto_run means we will run the script automatically
+            if we_are_in:
+                log.info("waiting 'Execute Script' button to be pressed / auto_process is set by script")
+                if auto_run:
+                    timeout = 0.5
+                else:
+                    # disable timeout - it will block all other traffic!
+                    timeout = 0
+                if not State.events.content_processed.wait(timeout=timeout):  # Wait for the button to be clicked
+                    log.error(f"no action from user: timed out ({timeout:.2f}s)")
+                    raise Exception("no action from user detected")
+
+                State.events.content_processed.clear()  # Reset the event for the next API call
+                log.info("'Execute Script' triggered")
 
                 with State.lock:
 
@@ -167,15 +184,19 @@ class FlaskThread(QThread):
                             cont = bytes(cont, 'utf-8')
 
                         if isinstance(cont, bytes):
+                            reply_body["action"] = "replace"
                             reply_body["content"] = base64.b64encode(cont).decode()
                         else:
                             log.error("replacement not 'bytes' or 'str'")
 
                         State.ui.content_tab.content_replacement = None
+            else:
+                log.debug("process_connection_content: not waiting for user action")
 
         except KeyError:
             log.error("::: error, no 'content'")
-            pass
+        except Exception as e:
+            log.error(f"process_connection_content: {e}")
 
         log.debug(f"::: sending {reply_body}")
         return jsonify(reply_body), 200
@@ -224,6 +245,50 @@ class FlaskThread(QThread):
         State.events.received_session_info.emit(session_id, None, json.dumps(payload))
 
         return jsonify({}), self.get_action_retcode(200)
+
+    def process_neighbor(self, payload):
+        state = payload["state"]
+        log.info(f"::: action - neighbor/{state}")
+
+        now = time.time()
+        # testing
+        ip_to_append = "1.1.1."
+        tag_to_append = "tag_"
+
+        ret_tupples = []
+        if state == "update" and "addresses" in payload.keys():
+            # for ip in payload["addresses"]:
+            #     log.info(f"::: action - neighbor/{state}, address {ip}")
+            #     ret_tupples.append([ip, f"+wh_{state}"])
+            #
+            #     # send "keepalive"
+            #     now1 = time.time()
+            #     if now1 - now > 5:
+            #         now = now1
+            #         log.info(f"::: action - neighbor/{state}, address {ip} - sending keepalive")
+            #         yield " "
+            #
+            # # testing add dummy testing
+            # for ipx in range(1,255):
+            #     ip = f"{ip_to_append}{ipx}"
+            #     tag = f"{tag_to_append}{ipx}"
+            #     ret_tupples.append([ip, tag])
+            #     time.sleep(0.1)
+            #
+            #     # send "keepalive"
+            #     now1 = time.time()
+            #     if now1 - now > 5:
+            #         now = now1
+            #         log.info(f"::: action - neighbor/{state}, address {ip} - sending keepalive")
+            #         yield " "
+
+            log.info(f"::: action - neighbor/{state} - sending result of ({len(ret_tupples)})")
+            yield json.dumps({
+                "status": "success",
+                "params": {
+                    "hostname_tags": ret_tupples,
+                }
+            })
 
     def process_ping(self, payload):
         log.info("::: action - ping")
