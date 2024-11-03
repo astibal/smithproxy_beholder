@@ -2,6 +2,40 @@ import sys
 import re
 from contextlib import contextmanager
 
+class CharFilter:
+    # Class attributes storing regex patterns
+    ALPHANUMERIC_REGEX = r'[^a-zA-Z0-9]'
+    FILENAME_REGEX = r'[^a-zA-Z0-9_.-]'
+    BASE_FILENAME_REGEX = r'[\\/]|(\.\.)'
+    EMAIL_REGEX = r'[^a-zA-Z0-9@._-]'
+    USERNAME_REGEX = r'[^a-zA-Z0-9_]'
+
+    @staticmethod
+    def alphanumeric(input_string: str, replacement=None) -> str:
+        repl = replacement or ''
+        return re.sub(CharFilter.ALPHANUMERIC_REGEX, repl, input_string)
+
+    @staticmethod
+    def filename(input_string: str, replacement=None) -> str:
+        repl = replacement or ''
+        return re.sub(CharFilter.FILENAME_REGEX, repl, input_string)
+
+    @staticmethod
+    def base_filename(input_string: str, replacement=None) -> str:
+        repl = replacement or ''
+        sanitized = re.sub(CharFilter.BASE_FILENAME_REGEX, repl, input_string)
+        return CharFilter.filename(sanitized, replacement=repl)
+
+    @staticmethod
+    def email(input_string: str, replacement=None) -> str:
+        repl = replacement or ''
+        return re.sub(CharFilter.EMAIL_REGEX, repl, input_string)
+
+    @staticmethod
+    def username(input_string: str, replacement=None) -> str:
+        repl = replacement or ''
+        return re.sub(CharFilter.USERNAME_REGEX, repl, input_string)
+
 def session_tuple(value: str):
     pattern = r"(?:.*_)?([\d.:a-fA-F]+):(\d+)"
     pattern = pattern + r"\+" + pattern

@@ -299,6 +299,9 @@ class ContentWidget(QWidget):
                         'print_bytes': print_bytes,
                         'hex_print': print_bytes,
                         'hexprint': print_bytes,
+                        # logging controls
+                        'do_log_file': False,
+                        'log_filename': None
                     }
                     exported_data['__appvars__'] = exported_data
 
@@ -329,6 +332,20 @@ class ContentWidget(QWidget):
             cursor.movePosition(QTextCursor.End)
             self.outputEdit.setTextCursor(cursor)
 
+            if exported_data['do_log_file']:
+                log_filename = 'log.txt'
+                overridden_log_filename = str(exported_data['log_filename'])
+                if exported_data['log_filename'] is not None and overridden_log_filename != "":
+                    tmp = CharFilter.base_filename(overridden_log_filename, replacement='_')
+                    if tmp:
+                        log_filename = tmp
+
+                with open(f'{Config.config["project_path"]}/{log_filename}', 'a') as logfile:
+                    dt = datetime.datetime.now()
+                    logfile.write(f"{dt}:\n")
+                    logfile.write(output)
+                    logfile.write(f"-- \n")
+
         # collect results
         if exported_data['content_replacement']:
             with State.lock:
@@ -345,7 +362,7 @@ class ContentWidget(QWidget):
             self.on_button_clicked()
 
     def update_content_text(self, data):
-        log.debug("update_display")
+        log.debug("update_content_text")
         with State.lock:
             should_update = not State.ui.skip_click
 
