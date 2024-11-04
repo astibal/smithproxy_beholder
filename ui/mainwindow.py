@@ -52,27 +52,41 @@ class MainWindow(QMainWindow):
 
         self.tab_widget = QTabWidget()
         self.tab_widget.setTabPosition(QTabWidget.North)
+        self.tab_widget.currentChanged.connect(self.tab_changed)
 
+        self.widget_list = []
         self.content_widget = ContentWidget()
+        self.widget_list.append(self.content_widget)
         self.tab_widget.addTab(self.content_widget, 'Content')
 
         self.workbench_widget = WorkbenchTab()
         self.tab_widget.addTab(self.workbench_widget, 'Workbench')
+        self.widget_list.append(self.workbench_widget)
 
         self.connection_widget = ConnectionTab()
         self.tab_widget.addTab(self.connection_widget, 'Connections')
+        self.widget_list.append(self.connection_widget)
 
         self.remotes_widget = RemoteTab()
         self.tab_widget.addTab(self.remotes_widget, 'Remotes')
+        self.widget_list.append(self.remotes_widget)
 
         self.log_widget = LogWidget()
         self.tab_widget.addTab(self.log_widget, 'Logs')
+        self.widget_list.append(self.log_widget)
 
         self.setCentralWidget(self.tab_widget)
 
+    def tab_changed(self, index):
+        i = 0
+        for widget in self.widget_list:
+            widget.setVisible(i == index)
+            i += 1
+
+
     @staticmethod
     def make_title_str():
-        return f'Smithproxy WebHook Application - {Config.config["project_path"]}'
+        return f'Smithproxy Beholder - {Config.config["project_path"]}'
 
     def open_project_dir(self):
         parent_dir = os.path.dirname(Config.config['project_path'])

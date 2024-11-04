@@ -3,7 +3,7 @@ import datetime
 
 from PyQt5 import QtCore
 from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import QVBoxLayout, QWidget, QTextEdit, QComboBox, QHBoxLayout, QLabel
+from PyQt5.QtWidgets import QVBoxLayout, QWidget, QTextEdit, QComboBox, QHBoxLayout, QLabel, QPlainTextEdit
 
 from util.fonts import load_font_prog, remove_ansi_color_codes
 
@@ -22,7 +22,7 @@ class WidgetLogger(logging.Handler, QtCore.QObject):
         self.widget = parent
         self.enabled = False
 
-        self.signal.connect(self.widget.append)
+        self.signal.connect(self.widget.appendPlainText)
 
         formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
         self.setFormatter(formatter)
@@ -52,7 +52,7 @@ class LogWidget(QWidget):
         self.initUI()
 
     def initUI(self):
-        self.logEdit = QTextEdit()
+        self.logEdit = QPlainTextEdit()
         layout = QVBoxLayout()
         layout.addWidget(self.logEdit)
 
@@ -118,10 +118,10 @@ class LogWidget(QWidget):
         now = datetime.datetime.now()
 
         if self.collectButton.isChecked():
-            self.logEdit.append(f"--- LogViewer Start --- : {now}")
+            self.logEdit.appendPlainText(f"--- LogViewer Start --- : {now}")
             self.widget_logger.enabled = True
         else:
-            self.logEdit.append(f"--- LogViewer Stop --- : {now}")
+            self.logEdit.appendPlainText(f"--- LogViewer Stop --- : {now}")
             self.widget_logger.enabled = False
 
     def on_log_level(self, text):
